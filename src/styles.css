@@ -552,14 +552,14 @@ h2 { margin-bottom: 0; font-size: 17px; line-height: 1.3; letter-spacing: -0.015
 
 .workspace-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 0.95fr) minmax(420px, 1.05fr);
   align-items: start;
   gap: 16px;
 }
 
 .panel { border: 1px solid var(--line); background: rgba(7, 16, 22, 0.86); }
 .assessment-panel, .result-panel { padding: 20px; }
-.result-panel { position: static; }
+.result-panel { position: sticky; top: 16px; }
 
 .panel-header, .result-heading, .manifest-topline, .policy-strip {
   display: flex;
@@ -593,10 +593,8 @@ h2 { margin-bottom: 0; font-size: 17px; line-height: 1.3; letter-spacing: -0.015
 .fixture-custom { display: grid; place-items: center; min-width: 100px; border: 1px solid transparent; padding: 0 10px; color: #546c78; font: 8px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .08em; }
 .fixture-custom.active { border-color: rgba(0, 200, 255, .4); color: var(--cyan); background: rgba(0, 200, 255, .06); }
 
-.assessment-intake-form { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(340px, .85fr); align-items: start; gap: 12px; }
-.assessment-intake-form .fixture-switch { grid-column: 1 / -1; margin-bottom: 0; }
-.assessment-intake-primary,
-.assessment-intake-secondary { display: grid; align-content: start; gap: 12px; min-width: 0; }
+.assessment-intake-form { display: grid; gap: 12px; }
+.assessment-intake-form .fixture-switch { margin-bottom: 0; }
 .intake-fieldset { min-width: 0; margin: 0; border: 1px solid var(--line); padding: 14px; }
 .intake-fieldset legend { padding: 0 7px; color: #8ba0aa; font: 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .09em; text-transform: uppercase; }
 .intake-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -944,8 +942,6 @@ h2 { margin-bottom: 0; font-size: 17px; line-height: 1.3; letter-spacing: -0.015
 @media (max-width: 1050px) {
   .workspace-grid { grid-template-columns: 1fr; }
   .result-panel { position: static; }
-  .assessment-intake-form { grid-template-columns: 1fr; }
-  .assessment-intake-form .fixture-switch { grid-column: auto; }
   .policy-strip { grid-template-columns: 1fr; align-items: flex-start; }
   .policy-strip > .status-pill { justify-self: start; }
   .gateway-status-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }

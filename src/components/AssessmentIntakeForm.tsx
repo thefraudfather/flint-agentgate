@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import type { ArtifactManifest } from "../domain/contracts";
 
 export type AssessmentPreset = "safe" | "risky" | "custom";
@@ -9,7 +8,6 @@ type AssessmentIntakeFormProps = {
   schemaDraft: string;
   schemaError?: string;
   disabled: boolean;
-  children: ReactNode;
   onPresetChange: (preset: Exclude<AssessmentPreset, "custom">) => void;
   onManifestChange: (manifest: ArtifactManifest) => void;
   onSchemaDraftChange: (value: string) => void;
@@ -38,7 +36,6 @@ export function AssessmentIntakeForm({
   schemaDraft,
   schemaError,
   disabled,
-  children,
   onPresetChange,
   onManifestChange,
   onSchemaDraftChange,
@@ -56,8 +53,7 @@ export function AssessmentIntakeForm({
         <span className={preset === "custom" ? "fixture-custom active" : "fixture-custom"}>CUSTOM INPUT</span>
       </div>
 
-      <div className="assessment-intake-primary">
-        <fieldset className="intake-fieldset" disabled={disabled}>
+      <fieldset className="intake-fieldset" disabled={disabled}>
           <legend>Publisher and artifact</legend>
           <div className="intake-grid">
             <label>
@@ -103,9 +99,9 @@ export function AssessmentIntakeForm({
               />
             </label>
           </div>
-        </fieldset>
+      </fieldset>
 
-        <fieldset className="intake-fieldset" disabled={disabled}>
+      <fieldset className="intake-fieldset" disabled={disabled}>
           <legend>Declared MCP tool</legend>
           <div className="intake-grid">
             <label>
@@ -171,11 +167,9 @@ export function AssessmentIntakeForm({
               ))}
             </div>
           </div>
-        </fieldset>
-      </div>
+      </fieldset>
 
-      <div className="assessment-intake-secondary">
-        <fieldset className="intake-fieldset" disabled={disabled}>
+      <fieldset className="intake-fieldset" disabled={disabled}>
           <legend>Schema and instructions</legend>
           <label className="intake-code-field">
             <span>Input schema, JSON</span>
@@ -194,9 +188,7 @@ export function AssessmentIntakeForm({
             <span>Tool instructions</span>
             <textarea rows={5} value={manifest.instructions} onChange={(event) => onManifestChange({ ...manifest, instructions: event.target.value })} />
           </label>
-        </fieldset>
-        {children}
-      </div>
+      </fieldset>
     </div>
   );
 }

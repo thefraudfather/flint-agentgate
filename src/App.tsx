@@ -45,7 +45,7 @@ const navItems: Array<{ id: View; label: string; glyph: string }> = [
   { id: "assessments", label: "Tool assessments", glyph: "02" },
   { id: "registry", label: "Identity registry", glyph: "03" },
   { id: "gateway", label: "Gateway policy", glyph: "04" },
-  { id: "evidence", label: "Evidence log", glyph: "05" },
+  { id: "evidence", label: "Evidence + help", glyph: "05" },
 ];
 
 const VIEW_TITLE: Record<View, string> = {
@@ -157,8 +157,8 @@ function App() {
     window.requestAnimationFrame(() => window.scrollTo({ left: 0, top: 0 }));
   };
 
-  const openEvidence = (tab: EvidenceTab = "records") => {
-    setEvidenceTab(tab);
+  const openEvidence = (tab?: EvidenceTab) => {
+    setEvidenceTab(tab ?? (evidenceHistory.length > 0 ? "records" : "guide"));
     openView("evidence");
   };
 
@@ -594,7 +594,7 @@ function App() {
           <div className="topbar-actions">
             <StatusPill tone="demo">DEMO DATA</StatusPill>
             <button className="secondary-button reset-button" type="button" onClick={() => resetDemo()}>Reset demo</button>
-            <button className="secondary-button" type="button" onClick={() => openEvidence()}>View evidence</button>
+            <button className="secondary-button" type="button" onClick={() => openEvidence()}>Help &amp; evidence</button>
           </div>
         </header>
 
@@ -718,27 +718,26 @@ function App() {
               onPresetChange={selectFixture}
               onManifestChange={changeManifest}
               onSchemaDraftChange={changeSchemaDraft}
-            >
-              <div className="assessment-engine-strip" aria-label="Assessment execution boundary">
-                <span><b>SCANNER</b> Community</span>
-                <span><b>METHOD</b> Rule-based review</span>
-                <span><b>SAFETY</b> Submitted tools never run</span>
+            />
+            <div className="assessment-engine-strip" aria-label="Assessment execution boundary">
+              <span><b>SCANNER</b> Community</span>
+              <span><b>METHOD</b> Rule-based review</span>
+              <span><b>SAFETY</b> Submitted tools never run</span>
+            </div>
+
+            {submission && (
+              <div className="intake-receipt">
+                <span>Saved exact version</span>
+                <code>{submission.artifactVersion.id}</code>
+                <small>{submission.artifactVersion.digest}</small>
               </div>
+            )}
 
-              {submission && (
-                <div className="intake-receipt">
-                  <span>Saved exact version</span>
-                  <code>{submission.artifactVersion.id}</code>
-                  <small>{submission.artifactVersion.digest}</small>
-                </div>
-              )}
-
-              {intakeError && <p className="error-message" role="alert">{intakeError}</p>}
-              {error && <p className="error-message" role="alert">{error}</p>}
-              <button className="primary-button" type="button" disabled={scanning || issuing} onClick={() => void runAssessment()}>
-                {scanning ? "Submitting and assessing…" : report ? "Reassess this exact version" : "Assess this tool version"}
-              </button>
-            </AssessmentIntakeForm>
+            {intakeError && <p className="error-message" role="alert">{intakeError}</p>}
+            {error && <p className="error-message" role="alert">{error}</p>}
+            <button className="primary-button" type="button" disabled={scanning || issuing} onClick={() => void runAssessment()}>
+              {scanning ? "Submitting and assessing…" : report ? "Reassess this exact version" : "Assess this tool version"}
+            </button>
           </article>
 
           <article className="panel result-panel" aria-live="polite">
@@ -1202,7 +1201,7 @@ function App() {
                 <ViewEmptyState
                   eyebrow="EVIDENCE / NO DECISIONS"
                   title="No gateway decisions yet"
-                  body={assignment ? "Run an allowed or out-of-mandate request to create the first signed record." : "Complete the tool assessment and Identity Registry, then test a gateway request."}
+                  body={assignment ? "Run an allowed or out-of-mandate request to create signed JSON you can copy or download here." : "Complete the tool assessment and Identity Registry, then test a gateway request. Each decision creates signed JSON you can copy or download here."}
                   actionLabel={assignment ? "Test agent access" : credential ? "Open identity registry" : "Open tool assessments"}
                   onAction={() => openView(assignment ? "gateway" : credential ? "registry" : "assessments")}
                 />

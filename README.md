@@ -4,11 +4,42 @@ FLINT AgentGate is an enterprise trust gateway for AI agents and MCP tools. It c
 
 This repository is an isolated hackathon prototype. It does not modify or deploy the production FLINT MVP.
 
+**Try it:** [live demo](https://flint-agentgate.vercel.app) · [public demo video](https://youtu.be/NzE9xj_ylyM)
+
+## Who it is for and what it proves
+
+AgentGate is for hackathon judges, security teams, and agent-platform builders evaluating how an agent can receive only the exact tool authority it needs. In one browser session, the demo assesses a declared tool version, binds agent capability to principal authority and tool semantics, exposes the eligible capability, and produces signed local evidence for both allowed and blocked requests.
+
+## Judge in 90 seconds
+
+1. Open the [live demo](https://flint-agentgate.vercel.app) and select **Tool Assessments**.
+2. Keep **Safe example**, select **Submit exact version & assess**, then **Issue community Tool Passport**.
+3. In **Identity Registry**, select **Register identity and semantic authority**, then **Claim agent and assign eligible tool**.
+4. In **Gateway Policy**, select **Invoke eligible tool** and open **Evidence Log** to inspect the ALLOW decision and signed local record.
+5. Return to **Gateway Policy**, select **Attempt semantic drift** to see BLOCK, then revoke the Tool Passport to see the eligible surface removed.
+
+The browser shows **WEBMCP LIVE** when native WebMCP is available and **FALLBACK READY** otherwise. Both routes use the same policy evaluator.
+
 ## Community and Command
 
 This repository is the cloneable **AgentGate Community** reference implementation. It works without a FLINT account or third-party scanner credential. Community credentials are locally signed and explicitly marked `community-self-attested`; they are not a FLINT Stamp and do not represent FLINT verification.
 
-**FLINT Command** is the managed assurance layer for FLINT-controlled identity and Stamp issuance, continuous discovery and reassessment, proprietary detection, revocation, monitoring, enterprise controls, and network intelligence. The public provider and scanner interfaces keep the Community integration compatible with those managed services without making them necessary for the local flow.
+**[FLINT Command](https://flint.network/command)** is the single managed assurance product for FLINT-controlled identity and Stamp issuance, continuous discovery and reassessment, proprietary detection, revocation, monitoring, enterprise controls, and network intelligence. The public provider and scanner interfaces keep Community compatible with that managed service without making it necessary for the local flow.
+
+Community records authority conditions but does not interpret them during runtime policy evaluation. A configured transaction ceiling is evaluated only when an invocation supplies `transactionUsd`; the built-in demo request does not. See [custom input and troubleshooting](docs/CUSTOM-INPUT.md) before adapting the sample.
+
+## Run locally
+
+Prerequisites: Node.js 22–24 and npm 10 or newer.
+
+```bash
+git clone https://github.com/thefraudfather/flint-agentgate.git
+cd flint-agentgate
+npm ci
+npm run dev
+```
+
+Open the printed URL (`http://127.0.0.1:4173` by default). Run `npm run release:check` for the complete release gate.
 
 ## What is implemented
 
@@ -39,24 +70,7 @@ This repository is the cloneable **AgentGate Community** reference implementatio
 
 The constellation visualizes records supplied to the local clone. Its static green and red nodes are explicitly simulated examples; Community does not issue FLINT passports or claim autonomous network discovery or FLINT verification. Managed Command adds verified discovery, fingerprint correlation, continuous monitoring, historical analysis, and response controls.
 
-The builder intake hashes and evaluates the submitted manifest fields. The source URL is provenance metadata in this prototype; Community does not fetch, clone, install, or execute the linked artifact. A PASS is eligibility for additional stamp review, not proof that an artifact is vulnerability-free.
-
-## Run locally
-
-```bash
-npm install
-npm test
-npm run build
-npm run dev
-```
-
-Before publishing a release candidate, run the complete reproducible gate:
-
-```bash
-npm run release:check
-```
-
-The local development server binds to `127.0.0.1:4173`.
+The builder intake hashes and evaluates the submitted manifest fields. The source URL is provenance metadata in this prototype; Community does not fetch, clone, install, or execute the linked artifact. A PASS is eligibility for additional stamp review, not proof that an artifact is vulnerability-free. See [custom input and troubleshooting](docs/CUSTOM-INPUT.md) for accepted fields and common failures.
 
 The default demo flow is:
 
@@ -84,7 +98,7 @@ The registered handler re-resolves the assignment and policy at invocation time.
 
 ## Architecture
 
-See [FLINT Command and the open-core boundary](docs/COMMAND.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/ASSESSMENT-CONTRACT.md](docs/ASSESSMENT-CONTRACT.md), [docs/THREAT-MODEL.md](docs/THREAT-MODEL.md), the exact [three-minute demo script](docs/DEMO-SCRIPT.md), the [submission brief](docs/SUBMISSION.md), and the [release checklist](docs/RELEASE-CHECKLIST.md).
+See [FLINT Command and the open-core boundary](docs/COMMAND.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/ASSESSMENT-CONTRACT.md](docs/ASSESSMENT-CONTRACT.md), [docs/THREAT-MODEL.md](docs/THREAT-MODEL.md), [custom input and troubleshooting](docs/CUSTOM-INPUT.md), the exact [three-minute demo script](docs/DEMO-SCRIPT.md), the [submission brief](docs/SUBMISSION.md), and the [release checklist](docs/RELEASE-CHECKLIST.md).
 
 Security reports should follow [SECURITY.md](SECURITY.md). Contributions should follow [CONTRIBUTING.md](CONTRIBUTING.md). FLINT names and verification marks are governed separately from the source license; see [TRADEMARKS.md](TRADEMARKS.md).
 

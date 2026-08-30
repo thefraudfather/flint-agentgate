@@ -14,9 +14,15 @@ export const dataClassSchema = z.enum([
   "personal",
 ]);
 
-const idSchema = z.string().min(3).max(160).regex(/^[a-zA-Z0-9_.:-]+$/);
+const idSchema = z.string().min(3).max(160).regex(
+  /^[a-zA-Z0-9_.:-]+$/,
+  "Use only letters, numbers, periods, underscores, colons, or hyphens.",
+);
 const nonEmptySchema = z.string().trim().min(1).max(1000);
-const digestSchema = z.string().regex(/^sha256:[a-f0-9]{64}$/);
+const digestSchema = z.string().regex(
+  /^sha256:[a-f0-9]{64}$/,
+  "Use sha256: followed by 64 lowercase hexadecimal characters.",
+);
 
 export const semanticRuleSchema = z.object({
   action: nonEmptySchema,
@@ -173,6 +179,16 @@ export const toolSchemaSchema = z.object({
   properties: z.record(z.unknown()).default({}),
   required: z.array(z.string()).default([]),
   additionalProperties: z.boolean().default(false),
+}).strict().superRefine((schema, context) => {
+  schema.required.forEach((property, index) => {
+    if (!Object.hasOwn(schema.properties, property)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["required", index],
+        message: `Required property "${property}" is not declared in properties.`,
+      });
+    }
+  });
 });
 
 export const toolDefinitionSchema = z.object({
@@ -203,7 +219,7 @@ export const artifactManifestSchema = z.object({
     id: idSchema,
     name: nonEmptySchema,
     version: z.string().trim().min(1).max(80),
-    sourceUri: z.string().url(),
+    sourceUri: z.string().url("Enter a complete URL such as https://example.com/tool."),
   }),
   tools: z.array(toolDefinitionSchema).min(1).max(128),
   instructions: z.string().max(100_000).default(""),
@@ -488,7 +504,7 @@ export const assignmentGrantSchema = z.object({
   toolPassportId: idSchema,
   toolSemanticContractId: idSchema,
   allowedActions: z.array(nonEmptySchema).min(1).max(64),
-  resourcePatterns: z.array(nonEmptySchema).min(1).max(64),
+  resourcePatterns: z.array(nonEmptySchema).max(64),
   dataClasses: z.array(dataClassSchema).max(16),
   destinations: z.array(nonEmptySchema).max(32),
   sideEffects: z.array(nonEmptySchema).max(32),

@@ -2,7 +2,7 @@
 
 ## Submission status
 
-This document describes the public release candidate. Video and Devpost URLs will be added to the submission record after publication.
+This document describes the public release candidate. The live demo and public video are available below; the Devpost entry remains tracked in the release checklist.
 
 | Artifact | Submission value |
 | --- | --- |
@@ -10,7 +10,7 @@ This document describes the public release candidate. Video and Devpost URLs wil
 | Public repository | https://github.com/thefraudfather/flint-agentgate |
 | Live WebMCP URL | https://flint-agentgate.vercel.app |
 | Public demo video | https://youtu.be/NzE9xj_ylyM |
-| Managed product destination | https://flint.network/command/app |
+| Managed product destination | https://flint.network/command |
 | License | MIT for source; FLINT names and marks remain governed by `TRADEMARKS.md` |
 
 ## Elevator pitch

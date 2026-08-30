@@ -82,23 +82,23 @@ export async function evaluateResolvedInvocation(input: {
   if (request.agentPassportId !== assignment.agentPassportId) reasons.push("ASSIGNMENT_AGENT_MISMATCH");
   if (request.toolPassportId !== assignment.toolPassportId) reasons.push("ASSIGNMENT_TOOL_MISMATCH");
   if (!anyMatch(assignment.allowedActions, request.action)) reasons.push("ACTION_NOT_ASSIGNED");
-  if (!anyMatch(assignment.resourcePatterns, request.resource)) reasons.push("RESOURCE_NOT_ASSIGNED");
-  if (!anyMatch(assignment.destinations, request.destination)) reasons.push("DESTINATION_NOT_ASSIGNED");
-  if (request.dataClasses.some((item) => !assignment.dataClasses.includes(item))) reasons.push("DATA_CLASS_NOT_ASSIGNED");
-  if (request.sideEffects.some((item) => !assignment.sideEffects.includes(item))) reasons.push("SIDE_EFFECT_NOT_ASSIGNED");
+  if (assignment.resourcePatterns.length > 0 && !anyMatch(assignment.resourcePatterns, request.resource)) reasons.push("RESOURCE_NOT_ASSIGNED");
+  if (assignment.destinations.length > 0 && !anyMatch(assignment.destinations, request.destination)) reasons.push("DESTINATION_NOT_ASSIGNED");
+  if (assignment.dataClasses.length > 0 && request.dataClasses.some((item) => !assignment.dataClasses.includes(item))) reasons.push("DATA_CLASS_NOT_ASSIGNED");
+  if (assignment.sideEffects.length > 0 && request.sideEffects.some((item) => !assignment.sideEffects.includes(item))) reasons.push("SIDE_EFFECT_NOT_ASSIGNED");
 
   if (!anyMatch(contract.allowedActions, request.action)) reasons.push("ACTION_OUTSIDE_TOOL_CONTRACT");
-  if (!anyMatch(contract.resources, request.resource)) reasons.push("RESOURCE_OUTSIDE_TOOL_CONTRACT");
-  if (!anyMatch(contract.destinations, request.destination)) reasons.push("DESTINATION_OUTSIDE_TOOL_CONTRACT");
-  if (request.dataClasses.some((item) => !contract.dataClasses.includes(item))) reasons.push("DATA_CLASS_OUTSIDE_TOOL_CONTRACT");
-  if (request.sideEffects.some((item) => !contract.sideEffects.includes(item))) reasons.push("SIDE_EFFECT_OUTSIDE_TOOL_CONTRACT");
+  if (contract.resources.length > 0 && !anyMatch(contract.resources, request.resource)) reasons.push("RESOURCE_OUTSIDE_TOOL_CONTRACT");
+  if (contract.destinations.length > 0 && !anyMatch(contract.destinations, request.destination)) reasons.push("DESTINATION_OUTSIDE_TOOL_CONTRACT");
+  if (contract.dataClasses.length > 0 && request.dataClasses.some((item) => !contract.dataClasses.includes(item))) reasons.push("DATA_CLASS_OUTSIDE_TOOL_CONTRACT");
+  if (contract.sideEffects.length > 0 && request.sideEffects.some((item) => !contract.sideEffects.includes(item))) reasons.push("SIDE_EFFECT_OUTSIDE_TOOL_CONTRACT");
 
   if (authority.deny.some((rule) => ruleMatches(rule, request))) reasons.push("SEMANTIC_DENY_MATCHED");
   if (!authority.allow.some((rule) => ruleMatches(rule, request))) reasons.push("OUTSIDE_SEMANTIC_AUTHORITY");
   if (authority.permittedRoots.length > 0 && !anyMatch(authority.permittedRoots, request.resource)) {
     reasons.push("OUTSIDE_PERMITTED_ROOT");
   }
-  if (request.sideEffects.some((item) => !authority.permittedSideEffects.includes(item))) {
+  if (authority.permittedSideEffects.length > 0 && request.sideEffects.some((item) => !authority.permittedSideEffects.includes(item))) {
     reasons.push("SIDE_EFFECT_OUTSIDE_SEMANTIC_AUTHORITY");
   }
   if (

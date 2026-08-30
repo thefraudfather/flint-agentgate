@@ -76,6 +76,7 @@ export function AssessmentIntakeForm({
                 artifact: { ...manifest.artifact, sourceUri: event.target.value },
               })}
             />
+            <small>Enter a complete http(s) URL. Community stores it as provenance and does not fetch it.</small>
           </label>
           <label>
             <span>Artifact name</span>
@@ -118,10 +119,12 @@ export function AssessmentIntakeForm({
           <label>
             <span>Capabilities, comma separated</span>
             <input value={joinList(tool.capabilities)} onChange={(event) => changeTool({ ...tool, capabilities: splitList(event.target.value) })} />
+            <small>List at least 1 declared capability, for example catalog:read.</small>
           </label>
           <label>
             <span>Destinations, comma separated</span>
             <input value={joinList(tool.destinations)} placeholder="api.example.com" onChange={(event) => changeTool({ ...tool, destinations: splitList(event.target.value) })} />
+            <small>List exact hosts the tool may contact. Empty means no destination restriction in Community.</small>
           </label>
         </div>
 
@@ -170,6 +173,7 @@ export function AssessmentIntakeForm({
         <legend>Schema and instructions</legend>
         <label className="intake-code-field">
           <span>Input schema, JSON</span>
+          <small>Use an object schema with properties, required, and additionalProperties. Other top-level JSON Schema keys are not supported.</small>
           <textarea
             rows={9}
             value={schemaDraft}

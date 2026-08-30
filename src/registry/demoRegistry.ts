@@ -61,8 +61,15 @@ export type RegistryContext = {
 };
 
 export function createDefaultRegistryDraft(credential: ToolPassportCredential): IdentityRegistryDraft {
+  const isCatalogDemo = credential.passport.toolName === "catalog.lookup";
+  const toolSlug = credential.passport.toolName
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "") || "declared-tool";
+  const toolLabel = toolSlug.split("-").map((word) => `${word[0].toUpperCase()}${word.slice(1)}`).join(" ");
+  const resourceRoot = isCatalogDemo ? "catalog://approved/*" : `tool://${toolSlug}/*`;
   const sharedScope: RegistryScopeDraft = {
-    resources: ["catalog://approved/*"],
+    resources: [resourceRoot],
     dataClasses: [...credential.passport.dataClasses],
     destinations: [...credential.passport.destinations],
     sideEffects: ["read"],
@@ -79,17 +86,19 @@ export function createDefaultRegistryDraft(credential: ToolPassportCredential): 
       blindSpots: ["No endpoint or API-direct telemetry connected"],
     },
     agent: {
-      id: "agent-passport:procurement",
-      displayName: "Procurement Analyst",
+      id: `agent-passport:${isCatalogDemo ? "procurement" : toolSlug}`,
+      displayName: isCatalogDemo ? "Procurement Analyst" : `${toolLabel} Agent`,
       fingerprint: `sha256:${"a".repeat(64)}`,
     },
     capability: structuredClone(sharedScope),
     authority: {
       ...structuredClone(sharedScope),
-      purpose: "Compare approved catalog products without purchasing.",
-      conditions: ["read-only"],
-      deniedActions: ["purchase.*"],
-      permittedRoots: ["catalog://approved/*"],
+      purpose: isCatalogDemo
+        ? "Compare approved catalog products without purchasing."
+        : `Use ${credential.passport.toolName} within its declared scope.`,
+      conditions: isCatalogDemo ? ["read-only"] : [],
+      deniedActions: isCatalogDemo ? ["purchase.*"] : [],
+      permittedRoots: [resourceRoot],
     },
     toolContract: structuredClone(sharedScope),
     assignment: structuredClone(sharedScope),

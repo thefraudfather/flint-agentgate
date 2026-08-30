@@ -5,6 +5,7 @@ import {
   artifactManifestSchema,
   contractVersion,
   gatewayDecisionSchema,
+  toolSchemaSchema,
   toolAssignmentSchema,
   toolPassportSchema,
   type AgentIdentity,
@@ -83,6 +84,30 @@ test("accepts the versioned demo artifact contract", () => {
   assert.equal(artifactManifestSchema.parse(safeManifest).contractVersion, contractVersion);
 });
 
+test("rejects unsupported top-level tool input schema keys", () => {
+  assert.equal(toolSchemaSchema.safeParse({
+    type: "object",
+    properties: {},
+    required: [],
+    additionalProperties: false,
+    minProperties: 1,
+  }).success, false);
+});
+
+test("rejects required tool inputs that are not declared as properties", () => {
+  const parsed = toolSchemaSchema.safeParse({
+    type: "object",
+    properties: { query: { type: "string" } },
+    required: ["missing"],
+    additionalProperties: false,
+  });
+
+  assert.equal(parsed.success, false);
+  if (!parsed.success) {
+    assert.deepEqual(parsed.error.issues[0]?.path, ["required", 0]);
+  }
+});
+
 test("allows only when identity, passport, assignment, and request intersect", async () => {
   const decision = await evaluateRequest({
     now,
@@ -102,6 +127,43 @@ test("allows only when identity, passport, assignment, and request intersect", a
 
   assert.equal(gatewayDecisionSchema.parse(decision).verdict, "ALLOW");
   assert.deepEqual(decision.reasonCodes, ["POLICY_INTERSECTION_SATISFIED"]);
+});
+
+test("treats empty legacy assignment constraints as unconstrained", async () => {
+  const decision = await evaluateRequest({
+    now,
+    agent: {
+      ...agent,
+      authority: {
+        ...agent.authority,
+        allow: [{
+          ...agent.authority.allow[0],
+          resources: [],
+          dataClasses: [],
+          destinations: [],
+        }],
+        permittedRoots: [],
+      },
+    },
+    passport,
+    assignment: {
+      ...assignment,
+      resourcePatterns: [],
+      dataClasses: [],
+      destinations: [],
+    },
+    request: {
+      id: "request:unconstrained",
+      agentId: agent.id,
+      toolPassportId: passport.id,
+      action: "catalog.lookup",
+      resource: "local://arbitrary/resource",
+      destination: "unlisted.example",
+      dataClasses: ["confidential"],
+    },
+  });
+
+  assert.equal(decision.verdict, "ALLOW");
 });
 
 test("blocks a request outside semantic authority even when a tool is assigned", async () => {

@@ -296,7 +296,7 @@ export function CommunityFleetConstellation(props: CommunityFleetConstellationPr
 
       <div className="constellation-disclosure">
         <p>Green and red nodes are simulated state examples. Community does not issue FLINT passports, discover every agent, or claim FLINT verification.</p>
-        <a href="https://flint.network/command/app" target="_blank" rel="noreferrer">Command adds verified discovery and control</a>
+        <a href="https://flint.network/command" target="_blank" rel="noreferrer">Explore FLINT Command</a>
       </div>
     </section>
   );

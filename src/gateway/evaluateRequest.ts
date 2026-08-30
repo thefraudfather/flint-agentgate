@@ -55,9 +55,9 @@ export async function evaluateRequest(input: EvaluationInput): Promise<GatewayDe
     if (assignment.toolPassportId !== request.toolPassportId) reasons.push("ASSIGNMENT_TOOL_MISMATCH");
     if (new Date(assignment.expiresAt) <= new Date(now)) reasons.push("ASSIGNMENT_EXPIRED");
     if (!anyMatch(assignment.allowedActions, request.action)) reasons.push("ACTION_NOT_ASSIGNED");
-    if (!anyMatch(assignment.resourcePatterns, request.resource)) reasons.push("RESOURCE_NOT_ASSIGNED");
-    if (!anyMatch(assignment.destinations, request.destination)) reasons.push("DESTINATION_NOT_ASSIGNED");
-    if (request.dataClasses.some((item) => !assignment.dataClasses.includes(item))) reasons.push("DATA_CLASS_NOT_ASSIGNED");
+    if (assignment.resourcePatterns.length > 0 && !anyMatch(assignment.resourcePatterns, request.resource)) reasons.push("RESOURCE_NOT_ASSIGNED");
+    if (assignment.destinations.length > 0 && !anyMatch(assignment.destinations, request.destination)) reasons.push("DESTINATION_NOT_ASSIGNED");
+    if (assignment.dataClasses.length > 0 && request.dataClasses.some((item) => !assignment.dataClasses.includes(item))) reasons.push("DATA_CLASS_NOT_ASSIGNED");
   }
 
   const denied = agent.authority.deny.some((rule) => (

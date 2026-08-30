@@ -37,8 +37,8 @@ type View = "overview" | "registry" | "assessments" | "gateway" | "evidence";
 
 const navItems: Array<{ id: View; label: string; glyph: string }> = [
   { id: "overview", label: "Overview", glyph: "01" },
-  { id: "registry", label: "Identity registry", glyph: "02" },
-  { id: "assessments", label: "Tool assessments", glyph: "03" },
+  { id: "assessments", label: "Tool assessments", glyph: "02" },
+  { id: "registry", label: "Identity registry", glyph: "03" },
   { id: "gateway", label: "Gateway policy", glyph: "04" },
   { id: "evidence", label: "Evidence log", glyph: "05" },
 ];
@@ -61,6 +61,13 @@ const severityOrder: Record<Finding["severity"], number> = {
 
 function StatusPill({ children, tone = "neutral" }: { children: React.ReactNode; tone?: string }) {
   return <span className={`status-pill status-${tone}`}>{children}</span>;
+}
+
+function formatValidationError(error: unknown, fallback: string) {
+  if (!(error instanceof Error)) return fallback;
+  const issues = (error as Error & { issues?: Array<{ path?: PropertyKey[]; message?: string }> }).issues;
+  if (!Array.isArray(issues) || issues.length === 0) return error.message;
+  return issues.map((issue) => `${issue.path?.join(".") || "Registry"}: ${issue.message || "Invalid value"}`).join(" ");
 }
 
 function ViewEmptyState({
@@ -166,6 +173,11 @@ function App() {
   };
 
   const resetDemo = (nextView: View = "overview") => {
+    const nextManifest = structuredClone(safeManifest);
+    setFixtureKey("safe");
+    setManifest(nextManifest);
+    setSchemaDraft(JSON.stringify(nextManifest.tools[0].inputSchema, null, 2));
+    setSchemaError(undefined);
     clearWorkflowState();
     setIntakeError(undefined);
     openView(nextView);
@@ -301,7 +313,7 @@ function App() {
       setIdentityState(nextRegistryContext.observedAgent.state);
     } catch (caught) {
       setRegistryContext(undefined);
-      setRegistryError(caught instanceof Error ? caught.message : "Identity registration failed closed.");
+      setRegistryError(formatValidationError(caught, "Identity registration failed closed."));
     } finally {
       setRegisteringIdentity(false);
     }
@@ -313,10 +325,14 @@ function App() {
     try {
       const previous = registryContext.authorityGrant;
       const version = previous.version + 1;
+      const baseId = `${previous.id.replace(/:v\d+(?::attempt-\d+)?$/, "")}:v${version}`;
+      const attempt = authorityChanges.filter((change) => (
+        change.proposedAuthorityGrantId === baseId || change.proposedAuthorityGrantId.startsWith(`${baseId}:attempt-`)
+      )).length + 1;
       const roots = authorityRevision.roots.split(/[\n,]/).map((value) => value.trim()).filter(Boolean);
       const proposed = semanticAuthorityGrantSchema.parse({
         ...previous,
-        id: `${previous.id.replace(/:v\d+$/, "")}:v${version}`,
+        id: attempt === 1 ? baseId : `${baseId}:attempt-${attempt}`,
         version,
         purpose: authorityRevision.purpose,
         allow: previous.allow.map((rule, index) => index === 0 ? { ...rule, resources: roots } : rule),
@@ -332,7 +348,7 @@ function App() {
       });
       setAuthorityChanges(provider.registry.snapshot().authorityChanges);
     } catch (caught) {
-      setRegistryError(caught instanceof Error ? caught.message : "Authority revision failed closed.");
+      setRegistryError(formatValidationError(caught, "Authority revision failed closed."));
     }
   };
 
@@ -361,7 +377,7 @@ function App() {
       }
       setAuthorityChanges(provider.registry.snapshot().authorityChanges);
     } catch (caught) {
-      setRegistryError(caught instanceof Error ? caught.message : "Authority decision failed closed.");
+      setRegistryError(formatValidationError(caught, "Authority decision failed closed."));
     }
   };
 
@@ -549,7 +565,7 @@ function App() {
           primaryMandate={registryContext?.authorityGrant.purpose ?? "No active authority grant. Local declaration only."}
           lifecycleState={identityState}
           assignmentActive={Boolean(assignment)}
-          verdict={runtimeDecision?.verdict}
+          verdict={gatewaySurface?.eligibility === "ineligible" ? undefined : runtimeDecision?.verdict}
           revoked={gatewaySurface?.eligibility === "ineligible"}
           invoking={invoking}
           invocationSequence={invocationSequence}
@@ -588,6 +604,15 @@ function App() {
             <span><b>BLIND SPOT</b> Endpoint + API-direct telemetry</span>
             <span><b>CLASSIFICATION</b> Verified / Correlated / Suspected kept distinct</span>
           </div>
+        </section>
+
+        <section className="panel overview-start" aria-label="Start the guided safe path">
+          <div>
+            <p className="eyebrow">GUIDED SAFE PATH</p>
+            <h2>Start with a tool that passes the bounded assessment</h2>
+            <p>Load the safe example, then follow each enabled action through identity, assignment, invocation, and signed evidence.</p>
+          </div>
+          <button className="primary-button" type="button" onClick={() => resetDemo("assessments")}>Start guided safe path</button>
         </section>
 
         <section className="workflow-steps" aria-label="Tool assurance workflow">
@@ -761,7 +786,7 @@ function App() {
                 <strong>Need authoritative assurance?</strong>
                 <p>FLINT Command adds managed identity, continuous reassessment, FLINT-controlled signing, revocation, monitoring, and network intelligence.</p>
               </div>
-              <a href="https://flint.network/command/app" target="_blank" rel="noreferrer">Open FLINT Command</a>
+              <a href="https://flint.network/command" target="_blank" rel="noreferrer">Explore FLINT Command</a>
             </div>
           </section>
         )}
@@ -874,8 +899,8 @@ function App() {
               <fieldset disabled={authorityChanges.some((change) => change.status === "pending")}>
                 <label><span>Change reason</span><input value={authorityRevision.reason} onChange={(event) => setAuthorityRevision({ ...authorityRevision, reason: event.target.value })} /></label>
                 <label><span>Purpose and mandate</span><textarea rows={3} value={authorityRevision.purpose} onChange={(event) => setAuthorityRevision({ ...authorityRevision, purpose: event.target.value })} /></label>
-                <label><span>Permitted roots</span><input value={authorityRevision.roots} onChange={(event) => setAuthorityRevision({ ...authorityRevision, roots: event.target.value })} /></label>
-                <label><span>Transaction ceiling, USD</span><input type="number" min="0" placeholder="Not applicable" value={authorityRevision.maxTransactionUsd} onChange={(event) => setAuthorityRevision({ ...authorityRevision, maxTransactionUsd: event.target.value })} /></label>
+                <label><span>Permitted roots</span><input value={authorityRevision.roots} onChange={(event) => setAuthorityRevision({ ...authorityRevision, roots: event.target.value })} /><small>Use exact paths or a trailing * wildcard, separated by commas.</small></label>
+                <label><span>Transaction ceiling, USD</span><input type="number" min="0" placeholder="Not applicable" value={authorityRevision.maxTransactionUsd} onChange={(event) => setAuthorityRevision({ ...authorityRevision, maxTransactionUsd: event.target.value })} /><small>Optional. Enforced when an invocation includes transactionUsd.</small></label>
                 <button className="secondary-button" type="button" onClick={proposeAuthorityRevision}>Propose authority v{registryContext.authorityGrant.version + 1}</button>
               </fieldset>
 
@@ -949,7 +974,7 @@ function App() {
             {runtimeDecision && invocationEvidence && (
               <div className={`runtime-receipt verdict-${runtimeDecision.verdict.toLowerCase()}`}>
                 <div>
-                  <span>Gateway verdict</span>
+                  <span>{gatewaySurface.eligibility === "registered" ? "Gateway verdict" : "Last gateway verdict before revocation"}</span>
                   <strong>{runtimeDecision.verdict}</strong>
                   <p>{runtimeDecision.reasonCodes.join(" · ")}</p>
                 </div>

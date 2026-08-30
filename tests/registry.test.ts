@@ -12,6 +12,7 @@ import {
 } from "../src/domain/contracts";
 import { LocalTrustProvider } from "../src/providers/localTrustProvider";
 import { AssignmentRejectedError } from "../src/registry/assignmentPolicy";
+import { classifyAuthorityChange } from "../src/registry/authorityChanges";
 import { IdentityRegistry } from "../src/registry/identityRegistry";
 import { safeManifest } from "../src/scanner/fixtures";
 
@@ -183,6 +184,33 @@ test("assignment rejects requested authority expansion", async () => {
   );
 });
 
+test("assignment preflight rejects an unconstrained empty scope under constrained authority", async () => {
+  const context = await setupRegistry();
+  await assert.rejects(
+    () => context.registry.createAssignment({
+      agentPassportId: context.agentPassport.id,
+      capabilityClaimId: context.capabilityClaim.id,
+      authorityGrantId: context.authorityGrant.id,
+      toolPassportId: context.credential.passport.id,
+      toolContractId: context.toolContract.id,
+      request: {
+        ...validRequest,
+        id: "assignment:unconstrained-expansion",
+        resourcePatterns: [],
+        dataClasses: [],
+        destinations: [],
+        sideEffects: [],
+      },
+      now,
+    }),
+    (error: unknown) => error instanceof AssignmentRejectedError
+      && error.reasonCodes.includes("RESOURCE_EXPANDS_AUTHORITY")
+      && error.reasonCodes.includes("SIDE_EFFECT_EXPANDS_AUTHORITY")
+      && error.reasonCodes.includes("ACTION_EXPANDS_CAPABILITY")
+      && error.reasonCodes.includes("ACTION_EXPANDS_TOOL_CONTRACT"),
+  );
+});
+
 test("authority revisions stay unusable until approval and supersede old assignments", async () => {
   const context = await setupRegistry();
   const oldAssignment = await context.registry.createAssignment({
@@ -343,6 +371,23 @@ test("authority revision classifier surfaces expansions", async () => {
   });
 
   assert.equal(change.classification, "expansion");
+});
+
+test("authority revision classifier treats added conditions as narrowing", async () => {
+  const context = await setupRegistry();
+  const previous = semanticAuthorityGrantSchema.parse({
+    ...context.authorityGrant,
+    allow: [{ ...context.authorityGrant.allow[0], conditions: [] }],
+  });
+  const proposed = semanticAuthorityGrantSchema.parse({
+    ...previous,
+    id: "authority-grant:procurement:v2",
+    version: 2,
+    allow: [{ ...previous.allow[0], conditions: ["human-approved"] }],
+  });
+
+  assert.equal(classifyAuthorityChange(previous, proposed), "narrowing");
+  assert.equal(classifyAuthorityChange(proposed, previous), "expansion");
 });
 
 test("tool contract exact-version mismatch fails before assignment", async () => {

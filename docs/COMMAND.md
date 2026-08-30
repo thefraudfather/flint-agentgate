@@ -107,7 +107,9 @@ MAY NOW
   intersect current request context
 ```
 
-The intersection covers actions, resources, systems, counterparties or destinations, data classes, side effects, transaction limits, conditions, expiry, and purpose. Resource types stay extensible; the model is not hard-coded to a drive, operating system, network, or payment rail.
+The managed intersection covers actions, resources, systems, counterparties or destinations, data classes, side effects, transaction limits, conditions, expiry, and purpose. Resource types stay extensible; the model is not hard-coded to a drive, operating system, network, or payment rail.
+
+AgentGate Community records conditions but does not interpret them during invocation. Its transaction ceiling applies only when a request supplies `transactionUsd`; the built-in demo request does not. [FLINT Command](https://flint.network/command) is the managed product boundary for richer condition and policy interpretation.
 
 Deterministic checks are authoritative and run outside the model. Semantic Integrity can detect purpose or intent drift and escalate an otherwise mechanically valid request to REVIEW or BLOCK. It cannot turn a deterministic denial into ALLOW, and provider failure does not return ALLOW.
 

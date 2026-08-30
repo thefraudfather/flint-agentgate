@@ -20,7 +20,7 @@ The authoritative release is one immutable Git commit. The public repository, Ve
 - [x] Approve creation of a new public GitHub repository for this isolated prototype.
 - [x] Confirm MIT as the public source license.
 - [x] Approve a separate Vercel project and public deployment.
-- [x] Confirm https://flint.network/command/app as the managed-product destination.
+- [x] Confirm https://flint.network/command as the managed-product destination.
 - [x] Approve public YouTube publication and Devpost submission.
 - [ ] Provide production signing access only if the scope changes from Community credentials; never place it in this repository or client bundle.
 

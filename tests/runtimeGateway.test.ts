@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { verifyCommunityInvocationEvidence } from "../src/credentials/communityIssuer";
-import type { GatewayInvocationRequest, SemanticIntegrityProvider } from "../src/gateway/runtimeGateway";
+import {
+  evaluateResolvedInvocation,
+  type GatewayInvocationRequest,
+  type SemanticIntegrityProvider,
+} from "../src/gateway/runtimeGateway";
 import { LocalTrustProvider } from "../src/providers/localTrustProvider";
 import { seedDemoRegistry } from "../src/registry/demoRegistry";
 import { safeManifest } from "../src/scanner/fixtures";
@@ -55,6 +59,39 @@ test("eligible invocation is allowed and emits signed exact-version evidence", a
   assert.equal(result.evidenceCredential.evidence.toolSemanticContractVersion, 1);
   assert.equal(result.evidenceCredential.evidence.artifactDigest, context.credential.passport.artifactDigest);
   assert.equal(verification.integrityValid, true);
+});
+
+test("treats empty assignment, contract, and authority constraints as unconstrained", async () => {
+  const context = await setup();
+  const resolved = structuredClone(context.provider.resolveAssignment(context.assignment.id, { now }));
+  resolved.assignment.resourcePatterns = [];
+  resolved.assignment.dataClasses = [];
+  resolved.assignment.destinations = [];
+  resolved.assignment.sideEffects = [];
+  resolved.toolContract.resources = [];
+  resolved.toolContract.dataClasses = [];
+  resolved.toolContract.destinations = [];
+  resolved.toolContract.sideEffects = [];
+  resolved.authorityGrant.allow[0].resources = [];
+  resolved.authorityGrant.allow[0].dataClasses = [];
+  resolved.authorityGrant.allow[0].destinations = [];
+  resolved.authorityGrant.permittedRoots = [];
+  resolved.authorityGrant.permittedSideEffects = [];
+
+  const result = await evaluateResolvedInvocation({
+    now,
+    resolved,
+    request: {
+      ...context.request,
+      id: "invocation:unconstrained",
+      resource: "local://arbitrary/resource",
+      destination: "unlisted.example",
+      dataClasses: ["confidential"],
+      sideEffects: ["write"],
+    },
+  });
+
+  assert.equal(result.decision.verdict, "ALLOW");
 });
 
 test("semantic drift escalates an otherwise eligible invocation to BLOCK", async () => {

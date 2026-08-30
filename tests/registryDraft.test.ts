@@ -18,6 +18,24 @@ async function issueCredential() {
   return { provider, credential };
 }
 
+async function issueCustomCredential() {
+  const manifest = structuredClone(safeManifest);
+  manifest.artifact.id = "artifact:weather-lookup";
+  manifest.artifact.name = "Weather Lookup";
+  manifest.artifact.sourceUri = "https://example.com/weather-lookup";
+  manifest.tools[0].name = "weather.lookup";
+  manifest.tools[0].title = "Weather lookup";
+  manifest.tools[0].description = "Read the current forecast for an approved city.";
+  manifest.tools[0].capabilities = ["weather:read"];
+  manifest.tools[0].destinations = ["api.weather.example"];
+
+  const provider = new LocalTrustProvider();
+  const submission = await provider.submitArtifact(manifest, { now });
+  await provider.assessArtifact(submission.artifactVersion.id, { now });
+  const credential = await provider.issueToolPassport(submission.artifactVersion.id, manifest.tools[0].name, { now });
+  return credential;
+}
+
 test("editable registry draft creates separate identity and semantic records", async () => {
   const { provider, credential } = await issueCredential();
   const draft = createDefaultRegistryDraft(credential);
@@ -68,4 +86,17 @@ test("registry draft rejects malformed agent fingerprints before identity mutati
 
   await assert.rejects(() => registerRegistryDraft(provider, credential, draft));
   assert.equal(provider.registry.snapshot().agentPassports.length, 0);
+});
+
+test("custom tools receive neutral registry defaults instead of catalog demo authority", async () => {
+  const credential = await issueCustomCredential();
+  const draft = createDefaultRegistryDraft(credential);
+
+  assert.equal(draft.agent.id, "agent-passport:weather-lookup");
+  assert.equal(draft.agent.displayName, "Weather Lookup Agent");
+  assert.deepEqual(draft.capability.resources, ["tool://weather-lookup/*"]);
+  assert.deepEqual(draft.authority.permittedRoots, ["tool://weather-lookup/*"]);
+  assert.equal(draft.authority.purpose, "Use weather.lookup within its declared scope.");
+  assert.deepEqual(draft.authority.deniedActions, []);
+  assert.deepEqual(draft.authority.conditions, []);
 });

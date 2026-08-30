@@ -127,6 +127,8 @@ AND current request context
 
 Deny rules are evaluated before allow rules. Status, expiry, action, resource, data class, destination, side effect, and transaction limits remain outside the model and are enforced by code.
 
+Community records authority conditions but does not interpret them during invocation. A transaction ceiling is enforced only when the invocation request supplies `transactionUsd`; the built-in demo request does not. Managed policy interpretation belongs to FLINT Command.
+
 The Registry resolves every dependency at invocation time. Deterministic checks run before the `SemanticIntegrityProvider`; if any deterministic condition fails, the semantic provider is not called. Semantic evaluation can escalate an otherwise valid request to REVIEW or BLOCK, but it cannot turn a deterministic denial into ALLOW. Provider failure produces REVIEW, never ALLOW.
 
 Every successfully resolved invocation emits a locally signed `InvocationEvidenceCredential`. Its payload binds the request and decision to the exact Agent Capability Claim version, Semantic Authority Grant version, Tool Semantic Contract version, Assignment Grant, Tool Passport artifact digest, input digest, and policy digest. The record contains digests and reason codes rather than raw prompts, credentials, or tool output.

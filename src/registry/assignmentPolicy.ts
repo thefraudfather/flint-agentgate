@@ -44,11 +44,13 @@ export function patternContains(container: string, candidate: string): boolean {
 }
 
 export function everyPatternContained(requested: string[], allowed: string[]): boolean {
+  if (requested.length === 0) return allowed.length === 0;
   if (allowed.length === 0) return true;
   return requested.every((candidate) => allowed.some((container) => patternContains(container, candidate)));
 }
 
 export function everyValueContained(requested: string[], allowed: string[]): boolean {
+  if (requested.length === 0) return allowed.length === 0;
   if (allowed.length === 0) return true;
   return requested.every((candidate) => allowed.includes(candidate));
 }

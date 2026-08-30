@@ -16,7 +16,7 @@ function ruleIncludes(
     && everyPatternContained(candidate.resources, container.resources)
     && everyValueContained(candidate.dataClasses, container.dataClasses)
     && everyPatternContained(candidate.destinations, container.destinations)
-    && everyValueContained(container.conditions, candidate.conditions);
+    && container.conditions.every((condition) => candidate.conditions.includes(condition));
 }
 
 function authorityIncludes(container: SemanticAuthorityGrant, candidate: SemanticAuthorityGrant) {

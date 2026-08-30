@@ -25,6 +25,8 @@ function joinList(value: string[]) {
   return value.join(", ");
 }
 
+const idFormatHelp = "Use 3 to 160 letters, numbers, periods, underscores, colons, or hyphens.";
+
 function RegistryScopeEditor({
   label,
   code,
@@ -53,7 +55,7 @@ function RegistryScopeEditor({
       <label>
         <span>Resource patterns</span>
         <input value={joinList(scope.resources)} onChange={(event) => onChange({ ...scope, resources: splitList(event.target.value) })} />
-        <small>Comma-separated exact paths or directional wildcards.</small>
+        <small>Use comma-separated exact paths or a trailing * wildcard, for example catalog://approved/*.</small>
       </label>
       <label>
         <span>Destinations</span>
@@ -112,6 +114,7 @@ export function IdentityRegistryForm({ credential, draft, disabled, onChange }: 
           <label>
             <span>Organization ID</span>
             <input value={draft.organization.id} onChange={(event) => change("organization", { ...draft.organization, id: event.target.value })} />
+            <small>{idFormatHelp}</small>
           </label>
           <label>
             <span>Authorizing principal</span>
@@ -120,6 +123,7 @@ export function IdentityRegistryForm({ credential, draft, disabled, onChange }: 
           <label>
             <span>Principal ID</span>
             <input value={draft.principal.id} onChange={(event) => change("principal", { ...draft.principal, id: event.target.value })} />
+            <small>{idFormatHelp}</small>
           </label>
           <label>
             <span>Agent display name</span>
@@ -128,11 +132,12 @@ export function IdentityRegistryForm({ credential, draft, disabled, onChange }: 
           <label>
             <span>Agent Passport ID</span>
             <input value={draft.agent.id} onChange={(event) => change("agent", { ...draft.agent, id: event.target.value })} />
+            <small>{idFormatHelp}</small>
           </label>
           <label className="registry-span-two">
             <span>Agent build fingerprint</span>
             <input value={draft.agent.fingerprint} spellCheck={false} onChange={(event) => change("agent", { ...draft.agent, fingerprint: event.target.value })} />
-            <small>SHA-256 identity binding for this declared agent build. It is not a FLINT verification claim.</small>
+            <small>Enter sha256: followed by 64 lowercase hexadecimal characters. This declared binding is not a FLINT verification claim.</small>
           </label>
         </fieldset>
       </section>
@@ -150,6 +155,7 @@ export function IdentityRegistryForm({ credential, draft, disabled, onChange }: 
           <label>
             <span>Observed Agent ID</span>
             <input value={draft.observation.id} onChange={(event) => change("observation", { ...draft.observation, id: event.target.value })} />
+            <small>{idFormatHelp}</small>
           </label>
           <label>
             <span>Observation confidence</span>
@@ -208,6 +214,7 @@ export function IdentityRegistryForm({ credential, draft, disabled, onChange }: 
               <label>
                 <span>Permitted roots</span>
                 <input value={joinList(draft.authority.permittedRoots)} onChange={(event) => change("authority", { ...draft.authority, permittedRoots: splitList(event.target.value) })} />
+                <small>Use the same exact-path or trailing * syntax as Resource patterns.</small>
               </label>
               <label>
                 <span>Denied actions</span>
@@ -216,6 +223,7 @@ export function IdentityRegistryForm({ credential, draft, disabled, onChange }: 
               <label>
                 <span>Conditions</span>
                 <input value={joinList(draft.authority.conditions)} onChange={(event) => change("authority", { ...draft.authority, conditions: splitList(event.target.value) })} />
+                <small>Recorded for review and change classification. Community does not evaluate these strings at runtime.</small>
               </label>
               <label>
                 <span>Transaction ceiling, USD</span>
@@ -229,6 +237,7 @@ export function IdentityRegistryForm({ credential, draft, disabled, onChange }: 
                     maxTransactionUsd: event.target.value === "" ? undefined : Number(event.target.value),
                   })}
                 />
+                <small>Optional. Enforced when an invocation includes transactionUsd.</small>
               </label>
             </fieldset>
           </div>

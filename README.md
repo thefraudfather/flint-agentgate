@@ -4,6 +4,8 @@ FLINT AgentGate is an enterprise trust gateway for AI agents and MCP tools. It c
 
 This repository is an isolated hackathon prototype. It does not modify or deploy the production FLINT MVP.
 
+**[Run the live WebMCP demo](https://flint-agentgate.vercel.app)** · **[Open FLINT Command](https://flint.network/command/app)**
+
 ## Community and Command
 
 This repository is the cloneable **AgentGate Community** reference implementation. It works without a FLINT account or third-party scanner credential. Community credentials are locally signed and explicitly marked `community-self-attested`; they are not a FLINT Stamp and do not represent FLINT verification.

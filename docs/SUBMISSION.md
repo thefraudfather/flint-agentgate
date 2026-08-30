@@ -2,13 +2,13 @@
 
 ## Submission status
 
-This document describes the local release candidate. Public repository, deployment, video, and Devpost URLs remain intentionally unset until FLINT authorizes publication.
+This document describes the public release candidate. Video and Devpost URLs will be added to the submission record after publication.
 
 | Artifact | Submission value |
 | --- | --- |
 | Project name | FLINT AgentGate |
-| Public repository | Pending publication authorization |
-| Live WebMCP URL | Pending separate Vercel deployment |
+| Public repository | https://github.com/thefraudfather/flint-agentgate |
+| Live WebMCP URL | https://flint-agentgate.vercel.app |
 | Public demo video | Pending recording and publication |
 | Managed product destination | https://flint.network/command/app |
 | License | MIT for source; FLINT names and marks remain governed by `TRADEMARKS.md` |

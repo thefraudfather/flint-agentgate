@@ -4,33 +4,33 @@ The authoritative release is one immutable Git commit. The public repository, Ve
 
 ## Local release gates
 
-- [ ] `npm ci` succeeds from a clean clone.
-- [ ] `npm run release:check` passes.
-- [ ] Safe fixture completes assessment → Community Tool Passport → governed assignment → ALLOW.
-- [ ] Semantic drift produces BLOCK.
-- [ ] Revocation removes the eligible surface and denies stale handlers.
-- [ ] Risky fixture fails and cannot receive a Tool Passport.
-- [ ] Desktop, 390 px mobile, keyboard, reduced-motion, and clean-console checks pass.
-- [ ] No tracked environment files, credentials, customer details, local paths, private Notion URLs, or production signing material.
-- [ ] `README.md`, `LICENSE`, `SECURITY.md`, `TRADEMARKS.md`, `CONTRIBUTING.md`, and third-party notices are visible.
-- [ ] Community credentials remain visibly self-attested and cannot claim FLINT verification or a FLINT Stamp.
+- [x] `npm ci` succeeds from a clean clone.
+- [x] `npm run release:check` passes.
+- [x] Safe fixture completes assessment → Community Tool Passport → governed assignment → ALLOW.
+- [x] Semantic drift produces BLOCK.
+- [x] Revocation removes the eligible surface and denies stale handlers.
+- [x] Risky fixture fails and cannot receive a Tool Passport.
+- [x] Desktop, 390 px mobile, keyboard, reduced-motion, and clean-console checks pass.
+- [x] No tracked environment files, credentials, customer details, local paths, private Notion URLs, or production signing material.
+- [x] `README.md`, `LICENSE`, `SECURITY.md`, `TRADEMARKS.md`, `CONTRIBUTING.md`, and third-party notices are visible.
+- [x] Community credentials remain visibly self-attested and cannot claim FLINT verification or a FLINT Stamp.
 
 ## JT authorization gates
 
-- [ ] Approve creation of a new public GitHub repository for this isolated prototype.
-- [ ] Confirm MIT as the public source license.
-- [ ] Approve a separate Vercel project and public deployment.
-- [ ] Confirm https://flint.network/command/app as the managed-product destination.
+- [x] Approve creation of a new public GitHub repository for this isolated prototype.
+- [x] Confirm MIT as the public source license.
+- [x] Approve a separate Vercel project and public deployment.
+- [x] Confirm https://flint.network/command/app as the managed-product destination.
 - [ ] Approve public YouTube publication and Devpost submission.
 - [ ] Provide production signing access only if the scope changes from Community credentials; never place it in this repository or client bundle.
 
 ## Public repository and deployment
 
-- [ ] Create the public repository without importing private issues, discussions, CI secrets, or unrelated history.
-- [ ] Push the reviewed local history.
-- [ ] Verify the default branch and public license rendering.
-- [ ] Connect only the new public repository to a separate Vercel project.
-- [ ] Use no production credentials; the current static prototype needs none.
+- [x] Create the public repository without importing private issues, discussions, CI secrets, or unrelated history.
+- [x] Push the reviewed local history.
+- [x] Verify the default branch and public license rendering.
+- [x] Connect only the new public repository to a separate Vercel project.
+- [x] Use no production credentials; the current static prototype needs none.
 - [ ] Run `npm ci && npm run release:check` against a fresh public clone.
 - [ ] Verify the deployed asset matches the candidate SHA recorded below.
 - [ ] Run the complete judge path on the public URL in a WebMCP-capable browser and the visible fallback.

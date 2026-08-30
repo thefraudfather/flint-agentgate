@@ -6,17 +6,17 @@ This script matches the Community build. It does not claim a FLINT Stamp, produc
 
 1. Open the default **Catalog lookup** fixture.
 2. Point out the green simulated FLINT-valid nodes and red simulated authority-drift nodes, then hover the **Procurement Analyst** to show its locally declared scope and mandate. Click a node to demonstrate the six-second transient inspector.
-3. Point out that four nodes are sample declarations and only one demo agent is instrumented.
+3. Point out that six nodes are simulated samples and only one demo agent is instrumented.
 4. Point to **Agent Discovery & Coverage**: one of one synthetic events is observed on the connected gateway surface.
 5. State the blind spot: endpoint and API-direct telemetry are not connected, so the demo does not claim a percentage of all agents.
 6. The observation begins as **SUSPECTED** with 48 percent correlation confidence.
 
 ## 0:25–1:05 — Assess the exact tool version
 
-1. Select **Submit exact version & assess**.
+1. Open **Tool Assessments**, then select **Submit exact version & assess**.
 2. Show the immutable artifact version and SHA-256 digest.
 3. Show complete scanner coverage, stable risk identifiers, and the bounded Community Scanner adapter.
-4. Select **Issue community Tool Passport**.
+4. Select **Issue community Tool Passport**; the interface advances to **Identity Registry**.
 5. Call out **COMMUNITY SELF-ATTESTED**, **FLINT verified: NO**, and the locally verifiable signature. This is not a FLINT Stamp.
 
 ## 1:05–1:40 — Bind identity, authority, and tool semantics
@@ -26,14 +26,14 @@ This script matches the Community build. It does not claim a FLINT Stamp, produc
    - **MAY** — principal-issued Semantic Authority Grant;
    - **TOOL** — exact-version Tool Semantic Contract;
    - **MAY NOW** — the narrow Assignment Grant.
-2. Select **Claim agent & assign eligible tool**.
+2. Select **Claim agent & assign eligible tool**; the interface advances to **Gateway Policy**.
 3. The lifecycle advances from Observed through Correlated and Verified to Governed. Governed coverage becomes one of one on the named demo surface.
 
 ## 1:40–2:20 — Invoke and inspect signed evidence
 
 1. The Gateway says either **WEBMCP LIVE** or **FALLBACK READY**. The fallback is explicit and invokes the same Trust Provider path.
 2. Select **Invoke eligible tool**.
-3. Show **ALLOW**, the signed Invocation Evidence credential, and its capability, authority, contract, artifact, input, assignment, and policy bindings.
+3. Open **Evidence Log** and show **ALLOW**, the signed Invocation Evidence credential, and its capability, authority, contract, artifact, input, assignment, and policy bindings.
 4. Explain that raw prompts, credentials, and tool output are not placed in the evidence record.
 
 ## 2:20–2:45 — Prove semantic policy cannot become an escape hatch

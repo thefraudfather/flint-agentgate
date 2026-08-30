@@ -185,6 +185,46 @@ h2 { margin-bottom: 0; font-size: 17px; line-height: 1.3; letter-spacing: -0.015
 .notice span { color: var(--amber); font: 10px ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.08em; white-space: nowrap; }
 .notice p { margin: 0; color: #c7d2d8; font-size: 12px; }
 
+.view-surface {
+  min-width: 0;
+  animation: view-enter 180ms ease-out both;
+}
+
+.view-surface > :first-child { margin-top: 0; }
+
+.view-empty-state {
+  display: grid;
+  grid-template-columns: auto minmax(0, 620px);
+  justify-content: center;
+  align-content: center;
+  gap: 20px;
+  min-height: 380px;
+  padding: 44px;
+  background:
+    linear-gradient(135deg, rgba(0, 200, 255, .035), transparent 48%),
+    rgba(7, 16, 22, .86);
+}
+
+.view-empty-glyph {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border: 1px solid var(--line-strong);
+  color: var(--cyan);
+  font: 18px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  box-shadow: inset 0 0 20px rgba(0, 200, 255, .05);
+}
+
+.view-empty-state h2 { font-size: 22px; }
+.view-empty-state div > p:last-of-type { margin: 9px 0 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.view-empty-action { width: auto; min-width: 190px; }
+
+@keyframes view-enter {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .constellation-panel {
   margin-bottom: 16px;
   overflow: hidden;
@@ -658,6 +698,23 @@ h2 { margin-bottom: 0; font-size: 17px; line-height: 1.3; letter-spacing: -0.015
 .runtime-receipt code { display: block; color: #8dd6b2; font-size: 10px; margin-top: 7px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .runtime-receipt.verdict-allow { border-left: 3px solid var(--green); }
 .runtime-receipt.verdict-block, .runtime-receipt.verdict-review { border-left: 3px solid #ff7474; }
+
+.evidence-log-panel { padding: 20px; }
+.evidence-log-panel.verdict-allow { border-left: 3px solid var(--green); }
+.evidence-log-panel.verdict-block,
+.evidence-log-panel.verdict-review,
+.evidence-log-panel.verdict-step_up { border-left: 3px solid var(--red); }
+.evidence-log-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+.evidence-log-heading h2 { overflow-wrap: anywhere; }
+.evidence-log-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-left: 1px solid var(--line); }
+.evidence-log-grid article { min-width: 0; padding: 14px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.evidence-log-grid span,
+.evidence-bindings span { display: block; margin-bottom: 6px; color: var(--muted); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; }
+.evidence-log-grid strong { display: block; overflow: hidden; color: #c5d3da; font: 10px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; text-overflow: ellipsis; white-space: nowrap; }
+.evidence-bindings { display: grid; gap: 10px; margin-top: 16px; }
+.evidence-bindings > div { min-width: 0; padding: 13px 14px; border: 1px solid var(--line); background: rgba(255,255,255,.02); }
+.evidence-bindings strong,
+.evidence-bindings code { display: block; overflow: hidden; color: #a9bdc6; font: 10px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; text-overflow: ellipsis; white-space: nowrap; }
 .registry-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
 .identity-lifecycle { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-left: 1px solid var(--line); }
 .identity-state { display: flex; align-items: center; gap: 9px; padding: 11px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); color: #5d7480; }
@@ -715,6 +772,8 @@ h2 { margin-bottom: 0; font-size: 17px; line-height: 1.3; letter-spacing: -0.015
   .constellation-stage { height: 520px; }
   .constellation-disclosure { gap: 8px; }
   .constellation-agent:not(.is-active) .agent-node-label { display: none; }
+  .view-empty-state { grid-template-columns: 1fr; justify-content: stretch; min-height: 320px; padding: 26px; }
+  .evidence-log-grid { grid-template-columns: 1fr 1fr; }
 }
 
 @media (max-width: 480px) {
@@ -736,6 +795,7 @@ h2 { margin-bottom: 0; font-size: 17px; line-height: 1.3; letter-spacing: -0.015
   .constellation-legend { display: none; }
   .constellation-popout dl { grid-template-columns: 1fr 1fr; }
   .gateway-status-grid { grid-template-columns: 1fr; }
+  .evidence-log-grid { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -19,6 +19,8 @@ The Community build adds two replaceable boundaries:
 
 The Community Fleet Constellation is a presentation adapter over records already supplied to the clone. One node follows the instrumented demo agent; two are local declarations; two are explicitly simulated FLINT-passport-valid examples; and two are explicitly simulated scope or mandate drift examples. Motion, transient hover/focus/click inspection, and decision-state rendering are public. Community does not issue FLINT passports. Autonomous discovery, fingerprint correlation, verified organizational inventory, historical telemetry, and response orchestration remain managed Command capabilities.
 
+The Community UI separates the trust loop into five functional views: Overview, Tool Assessments, Identity Registry, Gateway Policy, and Evidence Log. Each view remains inspectable before its workflow prerequisite exists and renders an explicit next-action state rather than an inert navigation shell. Successful credential issuance advances to Identity Registry; successful assignment advances to Gateway Policy; signed invocation records remain available through Evidence Log.
+
 ```text
 Community UI
   -> TrustProvider

@@ -32,6 +32,7 @@ This repository is the cloneable **AgentGate Community** reference implementatio
 - Conditional `document.modelContext.registerTool` exposure with a truthful visible fallback when WebMCP is unavailable.
 - Invocation-time eligibility re-resolution so freeze, revocation, and expiry remove the tool or deny stale registered handlers.
 - A responsive Command-style interface with two clearly labeled demo artifacts.
+- Functional Overview, Identity Registry, Tool Assessments, Gateway Policy, and Evidence Log views with prerequisite states and guided workflow transitions.
 - A responsive Community Fleet Constellation with seven moving agents, keyboard-accessible six-second inspection cards, simulated FLINT-valid and authority-drift states, and the live gateway decision state.
 - Tests for the stable contracts, safe and risky assessments, and semantic authorization boundaries.
 
@@ -58,13 +59,13 @@ The local development server binds to `127.0.0.1:4173`.
 
 The default demo flow is:
 
-1. Select the safe or malicious fixture.
+1. Open **Tool Assessments** and select the safe or malicious fixture.
 2. Submit and assess its exact version.
-3. Issue a community Tool Passport only for the passing fixture.
+3. Issue a community Tool Passport only for the passing fixture; the UI advances to **Identity Registry**.
 4. Verify the local signature and inspect the explicit assurance level.
-5. Claim the synthetic observed agent and assign only the eligible intersection of agent capability, principal authority, and exact-version tool semantics.
-6. Invoke the eligible tool through the WebMCP surface or clearly labeled fallback and inspect the signed evidence.
-7. Attempt semantic drift, then revoke the Tool Passport to see the invocation block and available surface change.
+5. Claim the synthetic observed agent and assign only the eligible intersection of agent capability, principal authority, and exact-version tool semantics; the UI advances to **Gateway Policy**.
+6. Invoke the eligible tool through the WebMCP surface or clearly labeled fallback.
+7. Open **Evidence Log** to inspect the signed record, then attempt semantic drift and revocation from **Gateway Policy**.
 
 All demo state and signing keys are ephemeral to the browser session.
 

@@ -8,4 +8,5 @@
 - Added conditional native WebMCP registration with a truthful policy-equivalent fallback.
 - Added the Community Fleet Constellation with local sample declarations, agent inspection cards, and live gateway decision state.
 - Expanded the constellation with simulated FLINT-valid and authority-drift nodes, transient six-second inspection, status stamps, and FLINT Command icon branding.
+- Turned the five-item sidebar into functional dashboard views with guided transitions, prerequisite states, and a dedicated signed Evidence Log.
 - Added the responsive judge journey, demo script, security boundary, and reproducible release checks.

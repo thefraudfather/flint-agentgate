@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type {
   AssessmentReport,
   AssignmentGrant,
@@ -32,6 +32,14 @@ const navItems: Array<{ id: View; label: string; glyph: string }> = [
   { id: "evidence", label: "Evidence log", glyph: "05" },
 ];
 
+const VIEW_TITLE: Record<View, string> = {
+  overview: "From submitted tool to governed capability",
+  registry: "Identity registry",
+  assessments: "Tool assessments",
+  gateway: "MCP gateway policy",
+  evidence: "Signed evidence log",
+};
+
 const severityOrder: Record<Finding["severity"], number> = {
   critical: 0,
   high: 1,
@@ -42,6 +50,32 @@ const severityOrder: Record<Finding["severity"], number> = {
 
 function StatusPill({ children, tone = "neutral" }: { children: React.ReactNode; tone?: string }) {
   return <span className={`status-pill status-${tone}`}>{children}</span>;
+}
+
+function ViewEmptyState({
+  eyebrow,
+  title,
+  body,
+  actionLabel,
+  onAction,
+}: {
+  eyebrow: string;
+  title: string;
+  body: string;
+  actionLabel: string;
+  onAction: () => void;
+}) {
+  return (
+    <section className="panel view-empty-state">
+      <span className="view-empty-glyph" aria-hidden="true">◇</span>
+      <div>
+        <p className="eyebrow">{eyebrow}</p>
+        <h2>{title}</h2>
+        <p>{body}</p>
+        <button className="primary-button view-empty-action" type="button" onClick={onAction}>{actionLabel}</button>
+      </div>
+    </section>
+  );
 }
 
 function ScoreRing({ report }: { report?: AssessmentReport }) {
@@ -83,7 +117,12 @@ function App() {
   const [error, setError] = useState<string>();
   const manifest: ArtifactManifest = fixtureKey === "safe" ? safeManifest : riskyManifest;
 
-  const resetDemo = () => {
+  const openView = (nextView: View) => {
+    setView(nextView);
+    window.requestAnimationFrame(() => window.scrollTo({ left: 0, top: 0 }));
+  };
+
+  const resetDemo = (nextView: View = "overview") => {
     setProvider(new LocalTrustProvider());
     setSubmission(undefined);
     setReport(undefined);
@@ -101,12 +140,14 @@ function App() {
     setInvoking(false);
     setInvocationSequence(0);
     setError(undefined);
-    setView("overview");
+    openView(nextView);
   };
 
-  useEffect(() => {
-    resetDemo();
-  }, [fixtureKey]);
+  const selectFixture = (nextFixture: FixtureKey) => {
+    if (nextFixture === fixtureKey) return;
+    setFixtureKey(nextFixture);
+    resetDemo("assessments");
+  };
 
   const runAssessment = async () => {
     setScanning(true);
@@ -150,6 +191,7 @@ function App() {
       setCredential(nextCredential);
       setVerification(nextVerification);
       setRegistryContext(nextRegistryContext);
+      openView("registry");
     } catch (caught) {
       setCredential(undefined);
       setVerification(undefined);
@@ -193,13 +235,15 @@ function App() {
         purposeHint: "Compare approved catalog products",
       });
       setGateway(nextGateway);
-      setGatewaySurface(nextGateway.sync({
+      const nextGatewaySurface = nextGateway.sync({
         assignmentId: nextAssignment.id,
         name: credential.passport.toolName,
         description: manifest.tools[0].description,
         inputSchema: manifest.tools[0].inputSchema,
         buildRequest,
-      }));
+      });
+      setGatewaySurface(nextGatewaySurface);
+      openView("gateway");
     } catch (caught) {
       setAssignment(undefined);
       setError(caught instanceof Error ? caught.message : "Identity claim and assignment failed.");
@@ -287,7 +331,7 @@ function App() {
               type="button"
               className={view === item.id ? "nav-item active" : "nav-item"}
               key={item.id}
-              onClick={() => setView(item.id)}
+              onClick={() => openView(item.id)}
             >
               <span>{item.glyph}</span>
               {item.label}
@@ -308,12 +352,12 @@ function App() {
         <header className="topbar">
           <div>
             <p className="eyebrow">COMMUNITY TRUST PLANE / {view.toUpperCase()}</p>
-            <h1>{view === "assessments" ? "Tool assessment" : "From submitted tool to governed capability"}</h1>
+            <h1>{VIEW_TITLE[view]}</h1>
           </div>
           <div className="topbar-actions">
             <StatusPill tone="demo">DEMO DATA</StatusPill>
-            <button className="secondary-button reset-button" type="button" onClick={resetDemo}>Reset demo</button>
-            <button className="secondary-button" type="button" onClick={() => setView("evidence")}>View evidence</button>
+            <button className="secondary-button reset-button" type="button" onClick={() => resetDemo()}>Reset demo</button>
+            <button className="secondary-button" type="button" onClick={() => openView("evidence")}>View evidence</button>
           </div>
         </header>
 
@@ -322,6 +366,9 @@ function App() {
           <p>Credentials issued here are locally self-attested. Their integrity is verifiable, but they are not a FLINT Stamp or FLINT-verified assurance.</p>
         </section>
 
+        <div className="view-surface" key={view}>
+        {view === "overview" ? (
+          <>
         <CommunityFleetConstellation
           primaryName={registryContext?.agentPassport.displayName ?? "Procurement Analyst"}
           primaryTool={manifest.tools[0].name}
@@ -402,6 +449,10 @@ function App() {
           </article>
         </section>
 
+          </>
+        ) : null}
+
+        {view === "assessments" ? (
         <section className="workspace-grid">
           <article className="panel assessment-panel">
             <div className="panel-header">
@@ -413,8 +464,8 @@ function App() {
             </div>
 
             <div className="fixture-switch" role="group" aria-label="Demo artifact">
-              <button type="button" className={fixtureKey === "safe" ? "selected" : ""} onClick={() => setFixtureKey("safe")}>Catalog lookup</button>
-              <button type="button" className={fixtureKey === "risky" ? "selected" : ""} onClick={() => setFixtureKey("risky")}>Autonomous operator</button>
+              <button type="button" className={fixtureKey === "safe" ? "selected" : ""} onClick={() => selectFixture("safe")}>Catalog lookup</button>
+              <button type="button" className={fixtureKey === "risky" ? "selected" : ""} onClick={() => selectFixture("risky")}>Autonomous operator</button>
             </div>
 
             <div className="artifact-summary">
@@ -524,8 +575,9 @@ function App() {
             </button>
           </article>
         </section>
+        ) : null}
 
-        {credential && verification && (
+        {view === "registry" && credential && verification && (
           <section className="panel credential-panel" aria-label="Issued Tool Passport">
             <div className="credential-heading">
               <div>
@@ -558,7 +610,7 @@ function App() {
           </section>
         )}
 
-        {credential && registryContext && (
+        {view === "registry" && credential && registryContext && (
           <section className="panel registry-panel" aria-label="Identity and assignment registry">
             <div className="registry-heading">
               <div>
@@ -615,7 +667,17 @@ function App() {
           </section>
         )}
 
-        {assignment && gatewaySurface && (
+        {view === "registry" && (!credential || !verification || !registryContext) ? (
+          <ViewEmptyState
+            eyebrow="IDENTITY REGISTRY / AWAITING CREDENTIAL"
+            title="Issue a Tool Passport before assigning authority"
+            body="The registry keeps agent identity, capability, semantic authority, and exact tool version separate. Complete a passing assessment and issue the local credential to load this view."
+            actionLabel="Open tool assessments"
+            onAction={() => openView("assessments")}
+          />
+        ) : null}
+
+        {view === "gateway" && assignment && gatewaySurface && (
           <section className="panel gateway-panel" aria-label="Conditional WebMCP Gateway">
             <div className="registry-heading">
               <div>
@@ -669,6 +731,17 @@ function App() {
           </section>
         )}
 
+        {view === "gateway" && (!assignment || !gatewaySurface) ? (
+          <ViewEmptyState
+            eyebrow="MCP GATEWAY / AWAITING ASSIGNMENT"
+            title="No eligible agent-tool intersection is active"
+            body={credential ? "Resolve the agent's capability, authority, and exact-version assignment in the Identity Registry before exposing the tool." : "Assess the tool, issue its credential, and resolve an identity assignment before the gateway can expose it."}
+            actionLabel={credential ? "Open identity registry" : "Open tool assessments"}
+            onAction={() => openView(credential ? "registry" : "assessments")}
+          />
+        ) : null}
+
+        {view === "gateway" ? (
         <section className="panel policy-strip">
           <div>
             <p className="eyebrow">RUNTIME INTERSECTION</p>
@@ -679,6 +752,56 @@ function App() {
           </div>
           <StatusPill tone="pass">FAIL CLOSED</StatusPill>
         </section>
+        ) : null}
+
+        {view === "evidence" && runtimeDecision && invocationEvidence ? (
+          <section className={`panel evidence-log-panel verdict-${runtimeDecision.verdict.toLowerCase()}`} aria-label="Signed invocation evidence log">
+            <div className="evidence-log-heading">
+              <div>
+                <p className="eyebrow">INVOCATION EVIDENCE CREDENTIAL</p>
+                <h2>{invocationEvidence.evidence.id}</h2>
+              </div>
+              <StatusPill tone={runtimeDecision.verdict === "ALLOW" ? "pass" : "fail"}>{runtimeDecision.verdict}</StatusPill>
+            </div>
+            <div className="evidence-log-grid">
+              <article><span>Occurred</span><strong>{new Date(invocationEvidence.evidence.occurredAt).toLocaleString()}</strong></article>
+              <article><span>Outcome</span><strong>{invocationEvidence.evidence.outcome.toUpperCase()}</strong></article>
+              <article><span>Agent identity</span><strong>{invocationEvidence.evidence.agentId}</strong></article>
+              <article><span>Tool Passport</span><strong>{invocationEvidence.evidence.toolPassportId}</strong></article>
+              <article><span>Action</span><strong>{invocationEvidence.evidence.action}</strong></article>
+              <article><span>Resource</span><strong>{invocationEvidence.evidence.resource}</strong></article>
+            </div>
+            <div className="evidence-bindings">
+              <div>
+                <span>Decision reasons</span>
+                <strong>{invocationEvidence.evidence.reasonCodes.join(" · ")}</strong>
+              </div>
+              <div>
+                <span>Version bindings</span>
+                <strong>Capability v{invocationEvidence.evidence.capabilityClaimVersion} · Authority v{invocationEvidence.evidence.semanticAuthorityGrantVersion} · Tool Contract v{invocationEvidence.evidence.toolSemanticContractVersion}</strong>
+              </div>
+              <div>
+                <span>Policy digest</span>
+                <code>{invocationEvidence.evidence.policyDigest}</code>
+              </div>
+              <div>
+                <span>Data integrity proof</span>
+                <code>{invocationEvidence.proof.proofValue}</code>
+              </div>
+            </div>
+          </section>
+        ) : null}
+
+        {view === "evidence" && (!runtimeDecision || !invocationEvidence) ? (
+          <ViewEmptyState
+            eyebrow="EVIDENCE LOG / NO EVENTS"
+            title="No signed invocation evidence has been emitted"
+            body={assignment ? "Invoke the eligible tool—or attempt semantic drift—to create a signed gateway decision record." : "Complete the tool assessment, identity assignment, and gateway invocation to create the first signed record."}
+            actionLabel={assignment ? "Open gateway policy" : credential ? "Open identity registry" : "Open tool assessments"}
+            onAction={() => openView(assignment ? "gateway" : credential ? "registry" : "assessments")}
+          />
+        ) : null}
+        </div>
       </main>
     </div>
   );

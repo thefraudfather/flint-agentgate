@@ -24,6 +24,7 @@ This repository is the cloneable **AgentGate Community** reference implementatio
 - A Local Trust Provider that can later be replaced by a managed Command provider without changing public contracts.
 - Separate, versioned Agent Passport, Capability Claim, Semantic Authority Grant, Tool Semantic Contract, and Assignment Grant records.
 - An editable Identity Registry intake for organization, principal, agent fingerprint, measured discovery evidence, capability, semantic authority, exact-version tool semantics, and requested assignment.
+- An append-only authority revision ledger that classifies proposed changes, requires approval, blocks pending grants, and invalidates assignments bound to superseded authority.
 - An assignment policy that rejects any requested action, resource, data class, destination, or side effect outside the complete authorization intersection.
 - Distinct Observed, Correlated, Verified, and Governed agent states with evidence and blind-spot disclosure.
 - A gateway evaluator that requires the intersection of agent authority, active Tool Passport, active assignment, exact tool semantics, and request context.
@@ -64,9 +65,10 @@ The default demo flow is:
 3. Issue a community Tool Passport only for the passing fixture; the UI advances to **Identity Registry**.
 4. Verify the local signature and inspect the explicit assurance level.
 5. Review or edit the organization, principal, observed identity, capability claim, semantic authority, exact-version tool contract, and requested assignment, then register the records.
-6. Claim the observed agent and assign only the preflighted eligible intersection; the UI advances to **Gateway Policy**.
-7. Invoke the eligible tool through the WebMCP surface or clearly labeled fallback.
-8. Open **Evidence Log** to inspect the signed record, then attempt semantic drift and revocation from **Gateway Policy**.
+6. Optionally propose and approve a new authority version; pending revisions cannot authorize tools and approval supersedes the prior grant.
+7. Claim the observed agent and assign only the preflighted eligible intersection; the UI advances to **Gateway Policy**.
+8. Invoke the eligible tool through the WebMCP surface or clearly labeled fallback.
+9. Open **Evidence Log** to inspect the signed record, then attempt semantic drift and revocation from **Gateway Policy**.
 
 All demo state and signing keys are ephemeral to the browser session.
 
@@ -82,7 +84,7 @@ The registered handler re-resolves the assignment and policy at invocation time.
 
 ## Architecture
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/ASSESSMENT-CONTRACT.md](docs/ASSESSMENT-CONTRACT.md), [docs/THREAT-MODEL.md](docs/THREAT-MODEL.md), the exact [three-minute demo script](docs/DEMO-SCRIPT.md), the [submission brief](docs/SUBMISSION.md), and the [release checklist](docs/RELEASE-CHECKLIST.md).
+See [FLINT Command and the open-core boundary](docs/COMMAND.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/ASSESSMENT-CONTRACT.md](docs/ASSESSMENT-CONTRACT.md), [docs/THREAT-MODEL.md](docs/THREAT-MODEL.md), the exact [three-minute demo script](docs/DEMO-SCRIPT.md), the [submission brief](docs/SUBMISSION.md), and the [release checklist](docs/RELEASE-CHECKLIST.md).
 
 Security reports should follow [SECURITY.md](SECURITY.md). Contributions should follow [CONTRIBUTING.md](CONTRIBUTING.md). FLINT names and verification marks are governed separately from the source license; see [TRADEMARKS.md](TRADEMARKS.md).
 

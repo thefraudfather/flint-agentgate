@@ -35,7 +35,7 @@ export class AssignmentRejectedError extends Error {
   }
 }
 
-function patternContains(container: string, candidate: string): boolean {
+export function patternContains(container: string, candidate: string): boolean {
   if (container === "*") return true;
   if (!container.endsWith("*")) return container === candidate;
   const containerPrefix = container.slice(0, -1);
@@ -43,12 +43,12 @@ function patternContains(container: string, candidate: string): boolean {
   return candidatePrefix.startsWith(containerPrefix);
 }
 
-function everyPatternContained(requested: string[], allowed: string[]): boolean {
+export function everyPatternContained(requested: string[], allowed: string[]): boolean {
   if (allowed.length === 0) return true;
   return requested.every((candidate) => allowed.some((container) => patternContains(container, candidate)));
 }
 
-function everyValueContained(requested: string[], allowed: string[]): boolean {
+export function everyValueContained(requested: string[], allowed: string[]): boolean {
   if (allowed.length === 0) return true;
   return requested.every((candidate) => allowed.includes(candidate));
 }

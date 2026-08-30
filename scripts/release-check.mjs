@@ -23,6 +23,7 @@ const requiredFiles = [
   "THIRD_PARTY_NOTICES.md",
   "docs/ARCHITECTURE.md",
   "docs/ASSESSMENT-CONTRACT.md",
+  "docs/COMMAND.md",
   "docs/DEMO-SCRIPT.md",
   "docs/RELEASE-CHECKLIST.md",
   "docs/SUBMISSION.md",

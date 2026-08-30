@@ -131,6 +131,30 @@ export const semanticAuthorityGrantSchema = z.object({
   expiresAt: z.string().datetime(),
 });
 
+export const authorityChangeProposalSchema = z.object({
+  contractVersion: z.literal(contractVersion),
+  id: idSchema,
+  agentPassportId: idSchema,
+  previousAuthorityGrantId: idSchema,
+  proposedAuthorityGrantId: idSchema,
+  classification: z.enum(["narrowing", "expansion", "mixed", "equivalent"]),
+  status: z.enum(["pending", "approved", "rejected"]),
+  requestedById: idSchema,
+  reason: nonEmptySchema,
+  requestedAt: z.string().datetime(),
+  decidedById: idSchema.optional(),
+  decidedAt: z.string().datetime().optional(),
+}).superRefine((proposal, context) => {
+  const decided = proposal.status !== "pending";
+  if (decided !== Boolean(proposal.decidedById && proposal.decidedAt)) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["status"],
+      message: "Approved and rejected authority changes require a decision actor and time.",
+    });
+  }
+});
+
 export const agentIdentitySchema = z.object({
   contractVersion: z.literal(contractVersion),
   id: idSchema,
@@ -569,6 +593,7 @@ export type ObservedAgent = z.infer<typeof observedAgentSchema>;
 export type AgentPassport = z.infer<typeof agentPassportSchema>;
 export type AgentCapabilityClaim = z.infer<typeof agentCapabilityClaimSchema>;
 export type SemanticAuthorityGrant = z.infer<typeof semanticAuthorityGrantSchema>;
+export type AuthorityChangeProposal = z.infer<typeof authorityChangeProposalSchema>;
 export type AssessmentReport = z.infer<typeof assessmentReportSchema>;
 export type AssessmentCheck = z.infer<typeof assessmentCheckSchema>;
 export type Finding = z.infer<typeof findingSchema>;

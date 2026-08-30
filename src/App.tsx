@@ -3,13 +3,14 @@ import type {
   AssessmentReport,
   AssignmentGrant,
   ArtifactManifest,
+  AuthorityChangeProposal,
   Finding,
   GatewayDecision,
   InvocationEvidenceCredential,
   ObservedAgent,
   ToolPassportCredential,
 } from "./domain/contracts";
-import { artifactManifestSchema } from "./domain/contracts";
+import { artifactManifestSchema, semanticAuthorityGrantSchema } from "./domain/contracts";
 import type { CommunityCredentialVerification } from "./credentials/communityIssuer";
 import { LocalTrustProvider } from "./providers/localTrustProvider";
 import type { SubmissionResult } from "./providers/trustProvider";
@@ -119,6 +120,8 @@ function App() {
   const [verification, setVerification] = useState<CommunityCredentialVerification>();
   const [registryDraft, setRegistryDraft] = useState<IdentityRegistryDraft>();
   const [registryContext, setRegistryContext] = useState<RegistryContext>();
+  const [authorityChanges, setAuthorityChanges] = useState<AuthorityChangeProposal[]>([]);
+  const [authorityRevision, setAuthorityRevision] = useState({ reason: "Reduce the agent blast radius.", purpose: "", roots: "", maxTransactionUsd: "" });
   const [registryError, setRegistryError] = useState<string>();
   const [registeringIdentity, setRegisteringIdentity] = useState(false);
   const [identityState, setIdentityState] = useState<ObservedAgent["state"]>("observed");
@@ -146,6 +149,7 @@ function App() {
     setVerification(undefined);
     setRegistryDraft(undefined);
     setRegistryContext(undefined);
+    setAuthorityChanges([]);
     setRegistryError(undefined);
     setRegisteringIdentity(false);
     setIdentityState("observed");
@@ -268,6 +272,7 @@ function App() {
       setVerification(nextVerification);
       setRegistryDraft(createDefaultRegistryDraft(nextCredential));
       setRegistryContext(undefined);
+      setAuthorityChanges([]);
       setRegistryError(undefined);
       openView("registry");
     } catch (caught) {
@@ -287,12 +292,76 @@ function App() {
     try {
       const nextRegistryContext = await registerRegistryDraft(provider, credential, registryDraft);
       setRegistryContext(nextRegistryContext);
+      setAuthorityRevision({
+        reason: "Reduce the agent blast radius.",
+        purpose: nextRegistryContext.authorityGrant.purpose,
+        roots: nextRegistryContext.authorityGrant.permittedRoots.join(", "),
+        maxTransactionUsd: nextRegistryContext.authorityGrant.maxTransactionUsd?.toString() ?? "",
+      });
       setIdentityState(nextRegistryContext.observedAgent.state);
     } catch (caught) {
       setRegistryContext(undefined);
       setRegistryError(caught instanceof Error ? caught.message : "Identity registration failed closed.");
     } finally {
       setRegisteringIdentity(false);
+    }
+  };
+
+  const proposeAuthorityRevision = () => {
+    if (!registryContext) return;
+    setRegistryError(undefined);
+    try {
+      const previous = registryContext.authorityGrant;
+      const version = previous.version + 1;
+      const roots = authorityRevision.roots.split(/[\n,]/).map((value) => value.trim()).filter(Boolean);
+      const proposed = semanticAuthorityGrantSchema.parse({
+        ...previous,
+        id: `${previous.id.replace(/:v\d+$/, "")}:v${version}`,
+        version,
+        purpose: authorityRevision.purpose,
+        allow: previous.allow.map((rule, index) => index === 0 ? { ...rule, resources: roots } : rule),
+        permittedRoots: roots,
+        maxTransactionUsd: authorityRevision.maxTransactionUsd === "" ? undefined : Number(authorityRevision.maxTransactionUsd),
+        issuedAt: new Date().toISOString(),
+      });
+      provider.registry.proposeAuthorityChange({
+        previousAuthorityGrantId: previous.id,
+        proposedAuthorityGrant: proposed,
+        requestedById: "operator:community-demo",
+        reason: authorityRevision.reason,
+      });
+      setAuthorityChanges(provider.registry.snapshot().authorityChanges);
+    } catch (caught) {
+      setRegistryError(caught instanceof Error ? caught.message : "Authority revision failed closed.");
+    }
+  };
+
+  const decideAuthorityRevision = (change: AuthorityChangeProposal, approve: boolean) => {
+    if (!registryContext) return;
+    setRegistryError(undefined);
+    try {
+      if (approve) {
+        provider.registry.approveAuthorityChange(change.id, registryContext.principal.id);
+        const authorityGrant = provider.registry.authorityGrant(change.proposedAuthorityGrantId);
+        setRegistryContext({ ...registryContext, authorityGrant });
+        setAssignment(undefined);
+        setGateway(undefined);
+        setGatewaySurface(undefined);
+        setRuntimeDecision(undefined);
+        setInvocationEvidence(undefined);
+        setIdentityState("verified");
+        setAuthorityRevision({
+          reason: "Reduce the agent blast radius.",
+          purpose: authorityGrant.purpose,
+          roots: authorityGrant.permittedRoots.join(", "),
+          maxTransactionUsd: authorityGrant.maxTransactionUsd?.toString() ?? "",
+        });
+      } else {
+        provider.registry.rejectAuthorityChange(change.id, registryContext.principal.id);
+      }
+      setAuthorityChanges(provider.registry.snapshot().authorityChanges);
+    } catch (caught) {
+      setRegistryError(caught instanceof Error ? caught.message : "Authority decision failed closed.");
     }
   };
 
@@ -786,6 +855,52 @@ function App() {
             <button className="primary-button registry-action" type="button" disabled={Boolean(assignment)} onClick={() => void claimAndAssign()}>
               {assignment ? "Agent governed / exact tool assigned" : "Claim agent and assign eligible tool"}
             </button>
+          </section>
+        )}
+
+        {view === "registry" && registryContext && (
+          <section className="panel authority-change-panel" aria-label="Authority revision ledger">
+            <div className="registry-heading">
+              <div>
+                <p className="eyebrow">VERSIONED AUTHORITY</p>
+                <h2>Propose, classify, and approve mandate changes</h2>
+              </div>
+              <StatusPill tone={authorityChanges.some((change) => change.status === "pending") ? "conditional" : "pass"}>
+                {authorityChanges.some((change) => change.status === "pending") ? "APPROVAL PENDING" : `ACTIVE V${registryContext.authorityGrant.version}`}
+              </StatusPill>
+            </div>
+
+            <div className="authority-change-layout">
+              <fieldset disabled={authorityChanges.some((change) => change.status === "pending")}>
+                <label><span>Change reason</span><input value={authorityRevision.reason} onChange={(event) => setAuthorityRevision({ ...authorityRevision, reason: event.target.value })} /></label>
+                <label><span>Purpose and mandate</span><textarea rows={3} value={authorityRevision.purpose} onChange={(event) => setAuthorityRevision({ ...authorityRevision, purpose: event.target.value })} /></label>
+                <label><span>Permitted roots</span><input value={authorityRevision.roots} onChange={(event) => setAuthorityRevision({ ...authorityRevision, roots: event.target.value })} /></label>
+                <label><span>Transaction ceiling, USD</span><input type="number" min="0" placeholder="Not applicable" value={authorityRevision.maxTransactionUsd} onChange={(event) => setAuthorityRevision({ ...authorityRevision, maxTransactionUsd: event.target.value })} /></label>
+                <button className="secondary-button" type="button" onClick={proposeAuthorityRevision}>Propose authority v{registryContext.authorityGrant.version + 1}</button>
+              </fieldset>
+
+              <div className="authority-ledger" aria-live="polite">
+                <article className="authority-ledger-entry active">
+                  <span>ACTIVE</span>
+                  <strong>Authority Grant v{registryContext.authorityGrant.version}</strong>
+                  <p>{registryContext.authorityGrant.purpose}</p>
+                </article>
+                {[...authorityChanges].reverse().map((change) => (
+                  <article className={`authority-ledger-entry ${change.status}`} key={change.id}>
+                    <span>{change.status.toUpperCase()} · {change.classification.toUpperCase()}</span>
+                    <strong>{change.previousAuthorityGrantId} → {change.proposedAuthorityGrantId}</strong>
+                    <p>{change.reason}</p>
+                    {change.status === "pending" ? (
+                      <div>
+                        <button className="primary-button" type="button" onClick={() => decideAuthorityRevision(change, true)}>Approve revision</button>
+                        <button className="danger-button" type="button" onClick={() => decideAuthorityRevision(change, false)}>Reject</button>
+                      </div>
+                    ) : <small>Decision recorded by {change.decidedById}</small>}
+                  </article>
+                ))}
+                {authorityChanges.length === 0 ? <p className="authority-ledger-empty">No revisions yet. The active grant remains the authority of record.</p> : null}
+              </div>
+            </div>
           </section>
         )}
 

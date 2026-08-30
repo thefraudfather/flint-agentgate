@@ -828,6 +828,32 @@ h2 { margin-bottom: 0; font-size: 17px; line-height: 1.3; letter-spacing: -0.015
 .coverage-disclosure span { border: 1px solid var(--line); padding: 6px 8px; color: #78909b; font-size: 9px; }
 .registry-action { margin-top: 13px; }
 
+.authority-change-panel { margin-top: 16px; padding: 20px; }
+.authority-change-layout { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 14px; margin-top: 16px; }
+.authority-change-layout fieldset { display: grid; align-content: start; gap: 11px; min-width: 0; margin: 0; border: 1px solid var(--line); padding: 14px; }
+.authority-change-layout label { display: grid; gap: 6px; }
+.authority-change-layout label span { color: #91a5af; font-size: 10px; }
+.authority-change-layout input,
+.authority-change-layout textarea { width: 100%; min-width: 0; border: 1px solid var(--line-strong); padding: 9px 10px; color: var(--text); background: #040b0f; font: inherit; font-size: 11px; line-height: 1.45; }
+.authority-change-layout input:focus-visible,
+.authority-change-layout textarea:focus-visible { border-color: var(--cyan); outline: 2px solid rgba(0, 200, 255, .12); }
+.authority-change-layout textarea { resize: vertical; }
+.authority-change-layout fieldset .secondary-button { width: 100%; }
+.authority-ledger { display: grid; align-content: start; gap: 8px; }
+.authority-ledger-entry { border: 1px solid var(--line); border-left: 3px solid #536b77; padding: 12px; background: rgba(255,255,255,.018); }
+.authority-ledger-entry.active,
+.authority-ledger-entry.approved { border-left-color: var(--green); }
+.authority-ledger-entry.pending { border-left-color: #ffc857; }
+.authority-ledger-entry.rejected { border-left-color: var(--red); }
+.authority-ledger-entry > span { color: var(--cyan); font: 9px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .08em; }
+.authority-ledger-entry > strong { display: block; margin-top: 7px; overflow-wrap: anywhere; font-size: 11px; }
+.authority-ledger-entry > p,
+.authority-ledger-entry > small,
+.authority-ledger-empty { color: var(--muted); font-size: 10px; line-height: 1.5; }
+.authority-ledger-entry > div { display: flex; gap: 8px; margin-top: 10px; }
+.authority-ledger-entry .primary-button { width: auto; margin: 0; }
+.authority-ledger-empty { border: 1px dashed var(--line); margin: 0; padding: 16px; }
+
 .policy-strip { margin-top: 16px; padding: 17px 20px; }
 .policy-flow { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .policy-flow span { border: 1px solid var(--line); background: var(--ink); padding: 8px 10px; color: #a8bac3; font-size: 10px; white-space: nowrap; }
@@ -841,6 +867,7 @@ h2 { margin-bottom: 0; font-size: 17px; line-height: 1.3; letter-spacing: -0.015
   .runtime-receipt { grid-template-columns: 1fr; }
   .coverage-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .registry-scope-grid { grid-template-columns: 1fr 1fr; }
+  .authority-change-layout { grid-template-columns: 1fr; }
   .policy-flow { order: 3; width: 100%; overflow-x: auto; padding-bottom: 4px; }
 }
 

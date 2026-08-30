@@ -2,6 +2,8 @@ import {
   agentCapabilityClaimSchema,
   agentPassportSchema,
   assignmentGrantSchema,
+  authorityChangeProposalSchema,
+  contractVersion,
   observedAgentSchema,
   organizationIdentitySchema,
   principalIdentitySchema,
@@ -11,6 +13,7 @@ import {
   type AgentCapabilityClaim,
   type AgentPassport,
   type AssignmentGrant,
+  type AuthorityChangeProposal,
   type ObservedAgent,
   type OrganizationIdentity,
   type PrincipalIdentity,
@@ -19,6 +22,7 @@ import {
   type ToolSemanticContract,
 } from "../domain/contracts";
 import { createAssignmentGrant, type AssignmentRequest } from "./assignmentPolicy";
+import { classifyAuthorityChange } from "./authorityChanges";
 
 const stateOrder: ObservedAgent["state"][] = ["observed", "correlated", "verified", "governed"];
 
@@ -52,6 +56,9 @@ export class IdentityRegistry {
   #agentPassports = new Map<string, AgentPassport>();
   #capabilityClaims = new Map<string, AgentCapabilityClaim>();
   #authorityGrants = new Map<string, SemanticAuthorityGrant>();
+  #authorityChanges = new Map<string, AuthorityChangeProposal>();
+  #pendingAuthorityGrantIds = new Set<string>();
+  #supersededAuthorityGrantIds = new Set<string>();
   #credentials = new Map<string, ToolPassportCredential>();
   #toolContracts = new Map<string, ToolSemanticContract>();
   #assignments = new Map<string, AssignmentGrant>();
@@ -100,8 +107,93 @@ export class IdentityRegistry {
     const passport = this.#agentPassports.get(record.agentPassportId);
     if (!passport) throw new Error("Authority grant Agent Passport is not registered.");
     if (passport.principalId !== record.issuerPrincipalId) throw new Error("Only the bound principal can issue this authority grant.");
+    if (this.#authorityGrants.has(record.id)) throw new Error("Semantic Authority Grant ID is already registered.");
+    if (record.version !== 1) throw new Error("Initial Semantic Authority Grant must be version 1.");
+    if ([...this.#authorityGrants.values()].some((grant) => grant.agentPassportId === record.agentPassportId)) {
+      throw new Error("Agent Passport already has a Semantic Authority Grant lineage.");
+    }
     this.#authorityGrants.set(record.id, record);
     return record;
+  }
+
+  proposeAuthorityChange(input: {
+    previousAuthorityGrantId: string;
+    proposedAuthorityGrant: SemanticAuthorityGrant;
+    requestedById: string;
+    reason: string;
+    requestedAt?: string;
+  }) {
+    const previous = this.#authorityGrants.get(input.previousAuthorityGrantId);
+    if (!previous) throw new Error("Previous Semantic Authority Grant is not registered.");
+    if (this.#pendingAuthorityGrantIds.has(previous.id)) throw new Error("Cannot revise a pending Semantic Authority Grant.");
+    if (this.#supersededAuthorityGrantIds.has(previous.id)) throw new Error("Cannot revise a superseded Semantic Authority Grant.");
+    if ([...this.#authorityChanges.values()].some((change) => (
+      change.agentPassportId === previous.agentPassportId && change.status === "pending"
+    ))) throw new Error("A pending authority change already exists for this agent.");
+
+    const proposed = immutable(semanticAuthorityGrantSchema.parse(input.proposedAuthorityGrant));
+    if (this.#authorityGrants.has(proposed.id)) throw new Error("Proposed Semantic Authority Grant ID is already registered.");
+    if (proposed.agentPassportId !== previous.agentPassportId || proposed.issuerPrincipalId !== previous.issuerPrincipalId) {
+      throw new Error("Authority revisions cannot change the bound agent or issuing principal.");
+    }
+    if (proposed.version !== previous.version + 1) throw new Error("Authority revisions must advance exactly one version.");
+
+    const requestedAt = input.requestedAt ?? new Date().toISOString();
+    const change = immutable(authorityChangeProposalSchema.parse({
+      contractVersion,
+      id: `authority-change:${proposed.id}`,
+      agentPassportId: proposed.agentPassportId,
+      previousAuthorityGrantId: previous.id,
+      proposedAuthorityGrantId: proposed.id,
+      classification: classifyAuthorityChange(previous, proposed),
+      status: "pending",
+      requestedById: input.requestedById,
+      reason: input.reason,
+      requestedAt,
+    }));
+    this.#authorityGrants.set(proposed.id, proposed);
+    this.#pendingAuthorityGrantIds.add(proposed.id);
+    this.#authorityChanges.set(change.id, change);
+    return change;
+  }
+
+  approveAuthorityChange(id: string, decidedById: string, decidedAt = new Date().toISOString()) {
+    const current = this.#authorityChanges.get(id);
+    if (!current || current.status !== "pending") throw new Error("Authority change is not pending.");
+    if (!this.#pendingAuthorityGrantIds.has(current.proposedAuthorityGrantId)) throw new Error("Proposed Semantic Authority Grant is not pending approval.");
+    if (this.#pendingAuthorityGrantIds.has(current.previousAuthorityGrantId)
+      || this.#supersededAuthorityGrantIds.has(current.previousAuthorityGrantId)) {
+      throw new Error("Previous Semantic Authority Grant is not the approved lineage head.");
+    }
+    const next = immutable(authorityChangeProposalSchema.parse({
+      ...current,
+      status: "approved",
+      decidedById,
+      decidedAt,
+    }));
+    this.#pendingAuthorityGrantIds.delete(current.proposedAuthorityGrantId);
+    this.#supersededAuthorityGrantIds.add(current.previousAuthorityGrantId);
+    this.#authorityChanges.set(id, next);
+    return next;
+  }
+
+  rejectAuthorityChange(id: string, decidedById: string, decidedAt = new Date().toISOString()) {
+    const current = this.#authorityChanges.get(id);
+    if (!current || current.status !== "pending") throw new Error("Authority change is not pending.");
+    const next = immutable(authorityChangeProposalSchema.parse({
+      ...current,
+      status: "rejected",
+      decidedById,
+      decidedAt,
+    }));
+    this.#pendingAuthorityGrantIds.delete(current.proposedAuthorityGrantId);
+    this.#supersededAuthorityGrantIds.add(current.proposedAuthorityGrantId);
+    this.#authorityChanges.set(id, next);
+    return next;
+  }
+
+  authorityGrant(id: string) {
+    return semanticAuthorityGrantSchema.parse(this.#authorityGrants.get(id));
   }
 
   registerToolCredential(
@@ -173,6 +265,8 @@ export class IdentityRegistry {
     if (!agentPassport || !capabilityClaim || !authorityGrant || !credential || !toolContract) {
       throw new Error("Assignment dependencies are incomplete.");
     }
+    if (this.#pendingAuthorityGrantIds.has(authorityGrant.id)) throw new Error("Semantic Authority Grant is pending approval.");
+    if (this.#supersededAuthorityGrantIds.has(authorityGrant.id)) throw new Error("Semantic Authority Grant is superseded.");
     if (this.#frozenAgentIds.has(agentPassport.id)) throw new Error("Agent Passport is frozen.");
     if (this.#revokedToolPassportIds.has(credential.passport.id)) throw new Error("Tool Passport is revoked.");
     const organization = this.#organizations.get(agentPassport.organizationId);
@@ -214,6 +308,8 @@ export class IdentityRegistry {
     const organization = organizationIdentitySchema.parse(this.#organizations.get(agentPassport.organizationId));
     const principal = principalIdentitySchema.parse(this.#principals.get(agentPassport.principalId));
 
+    if (this.#pendingAuthorityGrantIds.has(authorityGrant.id)) throw new Error("Semantic Authority Grant is pending approval.");
+    if (this.#supersededAuthorityGrantIds.has(authorityGrant.id)) throw new Error("Semantic Authority Grant is superseded.");
     if (this.#frozenAgentIds.has(agentPassport.id)) throw new Error("Agent Passport is frozen.");
     if (this.#revokedToolPassportIds.has(credential.passport.id)) throw new Error("Tool Passport is revoked.");
     if (organization.status !== "active") throw new Error("Agent organization is not active.");
@@ -237,6 +333,7 @@ export class IdentityRegistry {
       agentPassports: [...this.#agentPassports.values()],
       capabilityClaims: [...this.#capabilityClaims.values()],
       authorityGrants: [...this.#authorityGrants.values()],
+      authorityChanges: [...this.#authorityChanges.values()],
       credentials: [...this.#credentials.values()],
       toolContracts: [...this.#toolContracts.values()],
       assignments: [...this.#assignments.values()],

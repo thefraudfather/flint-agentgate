@@ -1,5 +1,7 @@
 # AgentGate architecture
 
+For the managed product boundary, discovery model, semantic-authority lifecycle, and open-core upgrade path, see [FLINT Command](COMMAND.md).
+
 ## Product boundary
 
 AgentGate is a policy enforcement and evidence plane. It does not claim to discover 100 percent of agents, prove that a tool has no vulnerabilities, or make model-written rules enforceable by themselves.
@@ -24,6 +26,8 @@ The Community UI separates the trust loop into five functional views: Overview, 
 Tool Assessments uses one editable `ArtifactManifest` throughout the trust loop. Builder fields cover publisher and artifact provenance, exact version, tool identity, declared capabilities and destinations, data classes, behavior annotations, JSON input schema, and instructions. Safe and risky examples populate those same fields rather than entering through a separate code path. Any edit clears stale assessment, credential, assignment, gateway, and evidence state before a new immutable version can be created. The source URL is stored as provenance only; this prototype does not fetch or execute it.
 
 Identity Registry uses one editable `IdentityRegistryDraft` after Tool Passport issuance. The draft captures organization and principal identity, a declared agent build fingerprint, observed evidence and coverage limits, the Agent Capability Claim, principal Semantic Authority Grant, exact-version Tool Semantic Contract, and requested Assignment Grant. Before any identity record is committed, the Local Trust Provider materializes every versioned contract and runs the existing assignment policy as a preflight. Invalid records or requested scope expansion fail before Registry mutation. Committed records are locked for the current ephemeral demo session.
+
+Authority changes append a new immutable Semantic Authority Grant and a separate proposal record. The Registry classifies the new envelope as narrowing, expansion, mixed, or equivalent. Pending and rejected grants cannot support assignments. Approval marks the prior grant superseded, so every assignment still bound to that version fails closed during resolution and must be reissued against the approved version.
 
 ```text
 Community UI

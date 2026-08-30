@@ -13,7 +13,7 @@ This script matches the Community build. It does not claim a FLINT Stamp, produc
 
 ## 0:25–1:05 — Assess the exact tool version
 
-1. Open **Tool Assessments**. Show the editable publisher, artifact, tool, scope, behavior, JSON Schema, and instruction fields, then select **Submit exact version & assess**.
+1. Open **Tool Assessments**. Show the editable publisher, artifact, tool, scope, behavior, JSON Schema, and instruction fields, then select **Assess this tool version**.
 2. Show the immutable artifact version and SHA-256 digest.
 3. Show complete scanner coverage, stable risk identifiers, and the bounded Community Scanner adapter.
 4. Select **Issue community Tool Passport**; the interface advances to **Identity Registry**.
@@ -33,21 +33,21 @@ This script matches the Community build. It does not claim a FLINT Stamp, produc
 
 ## 1:40–2:20 — Invoke and inspect signed evidence
 
-1. The Gateway says either **WEBMCP LIVE** or **FALLBACK READY**. The fallback is explicit and invokes the same Trust Provider path.
-2. Select **Invoke eligible tool**.
-3. Open **Evidence Log** and show **ALLOW**, the signed Invocation Evidence credential, and its capability, authority, contract, artifact, input, assignment, and policy bindings.
+1. The Gateway shows either **Native WebMCP** or **Browser demo**. The browser demo is explicit and invokes the same Trust Provider path.
+2. Select **Run allowed request**.
+3. Select **View signed evidence** and show **ALLOW**, the signed record, policy versions, JSON copy and download controls, and the plain-language decision reason.
 4. Explain that raw prompts, credentials, and tool output are not placed in the evidence record.
 
 ## 2:20–2:45 — Prove semantic policy cannot become an escape hatch
 
-1. Select **Attempt semantic drift**.
+1. Select **Run out-of-mandate request**.
 2. Show **BLOCK** and `SEMANTIC_INTENT_DRIFT_DETECTED`.
 3. State the invariant: deterministic checks run first; Semantic Integrity may escalate but can never override deterministic denial. Provider failure returns REVIEW, never ALLOW.
 
 ## 2:45–3:00 — Revoke and remove
 
-1. Select **Revoke Tool Passport**.
-2. Show **REMOVED**, the explicit revocation reason, and disabled invocation controls.
+1. Select **Revoke tool access**.
+2. Show **ACCESS REMOVED** and disabled request controls.
 3. Close on the product boundary: this public clone proves the standards and trust loop; FLINT Command adds authoritative identity and Stamp issuance, continuous discovery and reassessment, proprietary detection, enterprise monitoring, and network intelligence.
 
 Use **Reset demo** to return to the initial state without reloading the page.

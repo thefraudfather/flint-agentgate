@@ -31,9 +31,14 @@ import {
   AssessmentIntakeForm,
   type AssessmentPreset,
 } from "./components/AssessmentIntakeForm";
+import { AgentGateGlossary, HowAgentGateWorks } from "./components/EvidenceGuide";
 import { IdentityRegistryForm } from "./components/IdentityRegistryForm";
+import { summarizeGatewayDecision } from "./gateway/decisionCopy";
 
 type View = "overview" | "registry" | "assessments" | "gateway" | "evidence";
+type EvidenceTab = "records" | "guide" | "glossary";
+type EvidenceRecord = { decision: GatewayDecision; credential: InvocationEvidenceCredential };
+type EvidenceTransferState = "idle" | "copied" | "error";
 
 const navItems: Array<{ id: View; label: string; glyph: string }> = [
   { id: "overview", label: "Overview", glyph: "01" },
@@ -47,8 +52,8 @@ const VIEW_TITLE: Record<View, string> = {
   overview: "From submitted tool to governed capability",
   registry: "Identity registry",
   assessments: "Tool assessments",
-  gateway: "MCP gateway policy",
-  evidence: "Signed evidence log",
+  gateway: "Test an agent's tool access",
+  evidence: "Evidence center",
 };
 
 const severityOrder: Record<Finding["severity"], number> = {
@@ -107,7 +112,7 @@ function ScoreRing({ report }: { report?: AssessmentReport }) {
       </svg>
       <div>
         <strong>{report ? score : "N/A"}</strong>
-        <span>trust score</span>
+        <span>assessment score</span>
       </div>
     </div>
   );
@@ -137,6 +142,10 @@ function App() {
   const [gatewaySurface, setGatewaySurface] = useState<GatewaySurfaceState>();
   const [runtimeDecision, setRuntimeDecision] = useState<GatewayDecision>();
   const [invocationEvidence, setInvocationEvidence] = useState<InvocationEvidenceCredential>();
+  const [evidenceHistory, setEvidenceHistory] = useState<EvidenceRecord[]>([]);
+  const [selectedEvidenceId, setSelectedEvidenceId] = useState<string>();
+  const [evidenceTab, setEvidenceTab] = useState<EvidenceTab>("records");
+  const [evidenceTransferState, setEvidenceTransferState] = useState<EvidenceTransferState>("idle");
   const [invoking, setInvoking] = useState(false);
   const [invocationSequence, setInvocationSequence] = useState(0);
   const [scanning, setScanning] = useState(false);
@@ -146,6 +155,11 @@ function App() {
   const openView = (nextView: View) => {
     setView(nextView);
     window.requestAnimationFrame(() => window.scrollTo({ left: 0, top: 0 }));
+  };
+
+  const openEvidence = (tab: EvidenceTab = "records") => {
+    setEvidenceTab(tab);
+    openView("evidence");
   };
 
   const clearWorkflowState = () => {
@@ -165,6 +179,9 @@ function App() {
     setGatewaySurface(undefined);
     setRuntimeDecision(undefined);
     setInvocationEvidence(undefined);
+    setEvidenceHistory([]);
+    setSelectedEvidenceId(undefined);
+    setEvidenceTransferState("idle");
     setScanning(false);
     setIssuing(false);
     setInvoking(false);
@@ -254,6 +271,9 @@ function App() {
     setGatewaySurface(undefined);
     setRuntimeDecision(undefined);
     setInvocationEvidence(undefined);
+    setEvidenceHistory([]);
+    setSelectedEvidenceId(undefined);
+    setEvidenceTransferState("idle");
     try {
       const nextProvider = new LocalTrustProvider();
       const nextSubmission = await nextProvider.submitArtifact(validated.data);
@@ -439,6 +459,7 @@ function App() {
     setInvocationSequence((current) => current + 1);
     setRuntimeDecision(undefined);
     setInvocationEvidence(undefined);
+    setEvidenceTransferState("idle");
     setError(undefined);
     try {
       const resource = assignment.resourcePatterns[0]?.endsWith("*")
@@ -460,6 +481,8 @@ function App() {
       const result = await gateway.invokeFallback(request);
       setRuntimeDecision(result.decision);
       setInvocationEvidence(result.evidenceCredential);
+      setEvidenceHistory((current) => [...current, { decision: result.decision, credential: result.evidenceCredential }]);
+      setSelectedEvidenceId(result.evidenceCredential.evidence.id);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Gateway invocation failed closed.");
     } finally {
@@ -498,8 +521,33 @@ function App() {
     () => [...(report?.findings ?? [])].sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]),
     [report],
   );
+  const selectedEvidenceRecord = useMemo(
+    () => evidenceHistory.find((record) => record.credential.evidence.id === selectedEvidenceId) ?? evidenceHistory.at(-1),
+    [evidenceHistory, selectedEvidenceId],
+  );
+  const copySelectedEvidence = async () => {
+    if (!selectedEvidenceRecord) return;
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(selectedEvidenceRecord.credential, null, 2));
+      setEvidenceTransferState("copied");
+    } catch {
+      setEvidenceTransferState("error");
+    }
+  };
+  const downloadSelectedEvidence = () => {
+    if (!selectedEvidenceRecord) return;
+    const json = JSON.stringify(selectedEvidenceRecord.credential, null, 2);
+    const url = URL.createObjectURL(new Blob([json], { type: "application/json" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${selectedEvidenceRecord.credential.evidence.id.replace(/[^a-zA-Z0-9_.-]+/g, "-")}.json`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  };
   const snapshot = provider.snapshot();
-  const completedWorkflowSteps = invocationEvidence ? 5 : assignment ? 4 : credential ? 3 : report ? 2 : submission ? 1 : 0;
+  const completedWorkflowSteps = evidenceHistory.length > 0 ? 5 : assignment ? 4 : credential ? 3 : report ? 2 : submission ? 1 : 0;
 
   return (
     <div className="app-shell">
@@ -520,7 +568,7 @@ function App() {
               type="button"
               className={view === item.id ? "nav-item active" : "nav-item"}
               key={item.id}
-              onClick={() => openView(item.id)}
+              onClick={() => item.id === "evidence" ? openEvidence() : openView(item.id)}
             >
               <span>{item.glyph}</span>
               {item.label}
@@ -531,8 +579,8 @@ function App() {
         <div className="system-state">
           <span className="live-dot" />
           <div>
-            <strong>Local provider ready</strong>
-            <span>No FLINT credential required</span>
+            <strong>Demo engine ready</strong>
+            <span>No FLINT account required</span>
           </div>
         </div>
       </aside>
@@ -540,19 +588,19 @@ function App() {
       <main>
         <header className="topbar">
           <div>
-            <p className="eyebrow">COMMUNITY TRUST PLANE / {view.toUpperCase()}</p>
+            <p className="eyebrow">LOCAL COMMUNITY DEMO / {view.toUpperCase()}</p>
             <h1>{VIEW_TITLE[view]}</h1>
           </div>
           <div className="topbar-actions">
             <StatusPill tone="demo">DEMO DATA</StatusPill>
             <button className="secondary-button reset-button" type="button" onClick={() => resetDemo()}>Reset demo</button>
-            <button className="secondary-button" type="button" onClick={() => openView("evidence")}>View evidence</button>
+            <button className="secondary-button" type="button" onClick={() => openEvidence()}>View evidence</button>
           </div>
         </header>
 
-        <section className="notice" aria-label="Community assurance notice">
-          <span>COMMUNITY ASSURANCE</span>
-          <p>Credentials issued here are locally self-attested. Their integrity is verifiable, but they are not a FLINT Stamp or FLINT-verified assurance.</p>
+        <section className="notice" aria-label="Community demo limit">
+          <span>DEMO LIMIT</span>
+          <p>This browser creates its own signed records. A signature can reveal changes, but it is not a FLINT Stamp and does not mean FLINT verified the agent or tool.</p>
         </section>
 
         <div className="view-surface" key={view}>
@@ -670,34 +718,34 @@ function App() {
               onPresetChange={selectFixture}
               onManifestChange={changeManifest}
               onSchemaDraftChange={changeSchemaDraft}
-            />
-
-            <div className="assessment-engine-strip" aria-label="Assessment execution boundary">
-              <span><b>ENGINE</b> Community Scanner</span>
-              <span><b>MODE</b> Deterministic static</span>
-              <span><b>EXECUTION</b> Submitted tools never run</span>
-            </div>
-
-            {submission && (
-              <div className="intake-receipt">
-                <span>Immutable version</span>
-                <code>{submission.artifactVersion.id}</code>
-                <small>{submission.artifactVersion.digest}</small>
+            >
+              <div className="assessment-engine-strip" aria-label="Assessment execution boundary">
+                <span><b>SCANNER</b> Community</span>
+                <span><b>METHOD</b> Rule-based review</span>
+                <span><b>SAFETY</b> Submitted tools never run</span>
               </div>
-            )}
 
-            {intakeError && <p className="error-message" role="alert">{intakeError}</p>}
-            {error && <p className="error-message" role="alert">{error}</p>}
-            <button className="primary-button" type="button" disabled={scanning || issuing} onClick={() => void runAssessment()}>
-              {scanning ? "Submitting and assessing…" : report ? "Re-submit exact version" : "Submit exact version & assess"}
-            </button>
+              {submission && (
+                <div className="intake-receipt">
+                  <span>Saved exact version</span>
+                  <code>{submission.artifactVersion.id}</code>
+                  <small>{submission.artifactVersion.digest}</small>
+                </div>
+              )}
+
+              {intakeError && <p className="error-message" role="alert">{intakeError}</p>}
+              {error && <p className="error-message" role="alert">{error}</p>}
+              <button className="primary-button" type="button" disabled={scanning || issuing} onClick={() => void runAssessment()}>
+                {scanning ? "Submitting and assessing…" : report ? "Reassess this exact version" : "Assess this tool version"}
+              </button>
+            </AssessmentIntakeForm>
           </article>
 
-          <article className="panel result-panel">
+          <article className="panel result-panel" aria-live="polite">
             <div className="result-heading">
               <ScoreRing report={report} />
               <div>
-                <p className="eyebrow">FLINT ASSESSMENT CONTRACT V0</p>
+                <p className="eyebrow">TOOL ASSESSMENT RESULT</p>
                 <h2>{report?.verdict === "PASS" ? "Eligible for community issuance" : report?.verdict === "FAIL" ? "Tool Passport blocked" : report?.verdict === "ERROR" ? "Assessment failed closed" : report ? "Controls required" : "Awaiting exact-version submission"}</h2>
                 <p>{report ? `${report.findings.length} findings across declared instructions, schemas, annotations, and destinations.` : "Submit the selected manifest to create its immutable version and assessment evidence."}</p>
               </div>
@@ -713,7 +761,7 @@ function App() {
                 <strong>{report ? `${report.coverage.status.toUpperCase()} · ${report.coverage.completedChecks}/${report.coverage.requiredChecks}` : "Awaiting assessment"}</strong>
               </div>
               <div className="coverage-row">
-                <span>Adapter</span>
+                <span>Scanner</span>
                 <strong>{report ? `${provider.scanner.descriptor.displayName} · ${report.scanner.version}` : "Community Scanner"}</strong>
               </div>
             </div>
@@ -940,64 +988,76 @@ function App() {
         ) : null}
 
         {view === "gateway" && assignment && gatewaySurface && (
-          <section className="panel gateway-panel" aria-label="Conditional WebMCP Gateway">
+          <section className="panel gateway-panel" aria-label="AgentGate request check">
             <div className="registry-heading">
               <div>
-                <p className="eyebrow">CONDITIONAL WEBMCP GATEWAY</p>
-                <h2>Expose only what this agent may use now</h2>
+                <p className="eyebrow">LIVE POLICY TEST</p>
+                <h2>Check each request before the tool runs</h2>
+                <p className="gateway-intro">AgentGate compares the request with the current agent identity, approved tool version, active assignment, and principal mandate. A missing, revoked, expired, or out-of-scope requirement stops the request.</p>
               </div>
               <StatusPill tone={gatewaySurface.eligibility === "registered" ? "pass" : "fail"}>
-                {gatewaySurface.eligibility === "registered" ? (gatewaySurface.supported ? "WEBMCP LIVE" : "FALLBACK READY") : "REMOVED"}
+                {gatewaySurface.eligibility === "registered" ? "DEMO READY" : "ACCESS REMOVED"}
               </StatusPill>
             </div>
 
             <div className="gateway-status-grid">
-              <article><span>Browser surface</span><strong>{gatewaySurface.supported ? "document.modelContext" : "Visible fallback"}</strong></article>
-              <article><span>Eligibility</span><strong>{gatewaySurface.eligibility.toUpperCase()}</strong></article>
-              <article><span>Runtime rule</span><strong>Deterministic first</strong></article>
-              <article><span>Semantic gate</span><strong>Escalation only</strong></article>
+              <article><span>Test mode</span><strong>{gatewaySurface.supported ? "Native WebMCP" : "Browser demo"}</strong></article>
+              <article><span>Available to agent</span><strong>{gatewaySurface.eligibility === "registered" ? "YES" : "NO"}</strong></article>
+              <article><span>Exact scope checks</span><strong>RUN FIRST</strong></article>
+              <article><span>Purpose check</span><strong>RUNS SECOND</strong></article>
             </div>
-            <p className="surface-disclosure">{gatewaySurface.detail}</p>
+            <p className="surface-disclosure">{gatewaySurface.supported
+              ? "This browser exposes the native WebMCP surface. Requests still pass through the same AgentGate policy check."
+              : "This browser cannot call WebMCP directly, so the demo sends the same request through AgentGate's policy check."}</p>
 
             <div className="gateway-actions">
               <button className="primary-button" type="button" disabled={invoking || gatewaySurface.eligibility !== "registered"} onClick={() => void invokeTool(false)}>
-                {invoking ? "Evaluating…" : "Invoke eligible tool"}
+                {invoking ? "Checking request…" : "Run allowed request"}
               </button>
               <button className="secondary-button" type="button" disabled={invoking || gatewaySurface.eligibility !== "registered"} onClick={() => void invokeTool(true)}>
-                Attempt semantic drift
+                Run out-of-mandate request
               </button>
               <button className="danger-button" type="button" disabled={gatewaySurface.eligibility !== "registered"} onClick={revokeRuntimeTool}>
-                Revoke Tool Passport
+                Revoke tool access
               </button>
             </div>
+            <p className="gateway-action-help">The first test should be allowed. The second changes the stated purpose and should be blocked. Revoking access removes the tool until you reset the demo.</p>
 
             {runtimeDecision && invocationEvidence && (
               <div className={`runtime-receipt verdict-${runtimeDecision.verdict.toLowerCase()}`}>
                 <div>
-                  <span>{gatewaySurface.eligibility === "registered" ? "Gateway verdict" : "Last gateway verdict before revocation"}</span>
+                  <span>{gatewaySurface.eligibility === "registered" ? "Decision" : "Last decision before revocation"}</span>
                   <strong>{runtimeDecision.verdict}</strong>
-                  <p>{runtimeDecision.reasonCodes.join(" · ")}</p>
+                  <p>{summarizeGatewayDecision(runtimeDecision)}</p>
+                  <details>
+                    <summary>Show technical reason codes</summary>
+                    <code>{runtimeDecision.reasonCodes.join(" · ")}</code>
+                  </details>
                 </div>
                 <div>
-                  <span>Signed invocation evidence</span>
+                  <span>Signed evidence record</span>
                   <strong>{invocationEvidence.evidence.id}</strong>
-                  <code>{invocationEvidence.proof.proofValue}</code>
+                  <button className="secondary-button inline-action" type="button" onClick={() => openEvidence("records")}>View signed evidence</button>
                 </div>
                 <div>
-                  <span>Version bindings</span>
-                  <strong>Capability v{invocationEvidence.evidence.capabilityClaimVersion} · Authority v{invocationEvidence.evidence.semanticAuthorityGrantVersion} · Tool Contract v{invocationEvidence.evidence.toolSemanticContractVersion}</strong>
-                  <code>{invocationEvidence.evidence.policyDigest}</code>
+                  <span>Policy versions checked</span>
+                  <strong>Agent ability v{invocationEvidence.evidence.capabilityClaimVersion} · Owner authority v{invocationEvidence.evidence.semanticAuthorityGrantVersion} · Tool rules v{invocationEvidence.evidence.toolSemanticContractVersion}</strong>
+                  <details>
+                    <summary>Show policy fingerprint</summary>
+                    <code>{invocationEvidence.evidence.policyDigest}</code>
+                  </details>
                 </div>
               </div>
             )}
+            <p className="gateway-boundary">Community uses a bounded local purpose check. It records free-form Conditions but does not interpret them at runtime.</p>
           </section>
         )}
 
         {view === "gateway" && (!assignment || !gatewaySurface) ? (
           <ViewEmptyState
-            eyebrow="MCP GATEWAY / AWAITING ASSIGNMENT"
-            title="No eligible agent-tool intersection is active"
-            body={credential ? "Resolve the agent's capability, authority, and exact-version assignment in the Identity Registry before exposing the tool." : "Assess the tool, issue its credential, and resolve an identity assignment before the gateway can expose it."}
+            eyebrow="GATEWAY / WAITING FOR SETUP"
+            title="No tool is ready for this agent yet"
+            body={credential ? "Finish the Identity Registry to connect the agent, principal's authority, and approved tool version." : "Assess a tool, issue its local credential, and connect it to an agent before testing access."}
             actionLabel={credential ? "Open identity registry" : "Open tool assessments"}
             onAction={() => openView(credential ? "registry" : "assessments")}
           />
@@ -1006,62 +1066,149 @@ function App() {
         {view === "gateway" ? (
         <section className="panel policy-strip">
           <div>
-            <p className="eyebrow">RUNTIME INTERSECTION</p>
-            <h2>Identity ∩ Passport ∩ Assignment ∩ Context</h2>
+            <p className="eyebrow">WHY ACCESS IS ALLOWED OR BLOCKED</p>
+            <h2>Every request must pass all four checks</h2>
+            <small>Technical model: Identity ∩ Passport ∩ Assignment ∩ Context</small>
           </div>
           <div className="policy-flow" aria-label="Gateway policy sequence">
-            <span>Agent identity</span><b>→</b><span>Semantic authority</span><b>→</b><span>Assessed tool</span><b>→</b><span>Signed decision</span>
+            <span>Known agent</span><b>→</b><span>Approved limits</span><b>→</b><span>Approved tool version</span><b>→</b><span>Current request</span>
           </div>
-          <StatusPill tone="pass">FAIL CLOSED</StatusPill>
+          <StatusPill tone="pass">DENY IF ANY CHECK FAILS</StatusPill>
         </section>
         ) : null}
 
-        {view === "evidence" && runtimeDecision && invocationEvidence ? (
-          <section className={`panel evidence-log-panel verdict-${runtimeDecision.verdict.toLowerCase()}`} aria-label="Signed invocation evidence log">
-            <div className="evidence-log-heading">
-              <div>
-                <p className="eyebrow">INVOCATION EVIDENCE CREDENTIAL</p>
-                <h2>{invocationEvidence.evidence.id}</h2>
-              </div>
-              <StatusPill tone={runtimeDecision.verdict === "ALLOW" ? "pass" : "fail"}>{runtimeDecision.verdict}</StatusPill>
+        {view === "evidence" ? (
+          <>
+            <div className="evidence-tabs" aria-label="Evidence center sections">
+              {([
+                ["records", "Records"],
+                ["guide", "How it works"],
+                ["glossary", "Glossary"],
+              ] as const).map(([tab, label]) => (
+                <button
+                  id={`evidence-tab-${tab}`}
+                  className={evidenceTab === tab ? "active" : ""}
+                  type="button"
+                  aria-pressed={evidenceTab === tab}
+                  key={tab}
+                  onClick={() => setEvidenceTab(tab)}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
-            <div className="evidence-log-grid">
-              <article><span>Occurred</span><strong>{new Date(invocationEvidence.evidence.occurredAt).toLocaleString()}</strong></article>
-              <article><span>Outcome</span><strong>{invocationEvidence.evidence.outcome.toUpperCase()}</strong></article>
-              <article><span>Agent identity</span><strong>{invocationEvidence.evidence.agentId}</strong></article>
-              <article><span>Tool Passport</span><strong>{invocationEvidence.evidence.toolPassportId}</strong></article>
-              <article><span>Action</span><strong>{invocationEvidence.evidence.action}</strong></article>
-              <article><span>Resource</span><strong>{invocationEvidence.evidence.resource}</strong></article>
-            </div>
-            <div className="evidence-bindings">
-              <div>
-                <span>Decision reasons</span>
-                <strong>{invocationEvidence.evidence.reasonCodes.join(" · ")}</strong>
-              </div>
-              <div>
-                <span>Version bindings</span>
-                <strong>Capability v{invocationEvidence.evidence.capabilityClaimVersion} · Authority v{invocationEvidence.evidence.semanticAuthorityGrantVersion} · Tool Contract v{invocationEvidence.evidence.toolSemanticContractVersion}</strong>
-              </div>
-              <div>
-                <span>Policy digest</span>
-                <code>{invocationEvidence.evidence.policyDigest}</code>
-              </div>
-              <div>
-                <span>Data integrity proof</span>
-                <code>{invocationEvidence.proof.proofValue}</code>
-              </div>
-            </div>
-          </section>
-        ) : null}
 
-        {view === "evidence" && (!runtimeDecision || !invocationEvidence) ? (
-          <ViewEmptyState
-            eyebrow="EVIDENCE LOG / NO EVENTS"
-            title="No signed invocation evidence has been emitted"
-            body={assignment ? "Invoke the eligible tool or attempt semantic drift to create a signed gateway decision record." : "Complete the tool assessment, identity assignment, and gateway invocation to create the first signed record."}
-            actionLabel={assignment ? "Open gateway policy" : credential ? "Open identity registry" : "Open tool assessments"}
-            onAction={() => openView(assignment ? "gateway" : credential ? "registry" : "assessments")}
-          />
+            {evidenceTab === "guide" ? (
+              <div id="evidence-panel-guide">
+                <HowAgentGateWorks onStart={() => resetDemo("assessments")} />
+              </div>
+            ) : null}
+
+            {evidenceTab === "glossary" ? (
+              <div id="evidence-panel-glossary">
+                <AgentGateGlossary />
+              </div>
+            ) : null}
+
+            {evidenceTab === "records" && selectedEvidenceRecord ? (
+              <div className="evidence-workspace" id="evidence-panel-records">
+                <aside className="panel evidence-history" aria-label="Session evidence records">
+                  <div className="evidence-history-heading">
+                    <p className="eyebrow">THIS BROWSER SESSION</p>
+                    <h2>Gateway decisions</h2>
+                    <p>Resetting or closing this demo clears the list.</p>
+                  </div>
+                  <div className="evidence-history-list">
+                    {[...evidenceHistory].reverse().map((record) => (
+                      <button
+                        type="button"
+                        className={record.credential.evidence.id === selectedEvidenceRecord.credential.evidence.id ? "active" : ""}
+                        aria-pressed={record.credential.evidence.id === selectedEvidenceRecord.credential.evidence.id}
+                        key={record.credential.evidence.id}
+                        onClick={() => {
+                          setSelectedEvidenceId(record.credential.evidence.id);
+                          setEvidenceTransferState("idle");
+                        }}
+                      >
+                        <span className={`history-verdict verdict-${record.decision.verdict.toLowerCase()}`}>{record.decision.verdict}</span>
+                        <strong>{record.credential.evidence.action}</strong>
+                        <small>{new Date(record.credential.evidence.occurredAt).toLocaleTimeString()} · {record.credential.evidence.resource}</small>
+                      </button>
+                    ))}
+                  </div>
+                </aside>
+
+                <section className={`panel evidence-log-panel verdict-${selectedEvidenceRecord.decision.verdict.toLowerCase()}`} aria-label="Signed gateway evidence record">
+                  <div className="evidence-log-heading">
+                    <div>
+                      <p className="eyebrow">SIGNED GATEWAY RECORD</p>
+                      <h2>{selectedEvidenceRecord.decision.verdict === "ALLOW" ? "Allowed" : "Blocked"}: {selectedEvidenceRecord.credential.evidence.action}</h2>
+                      <code>{selectedEvidenceRecord.credential.evidence.id}</code>
+                    </div>
+                    <StatusPill tone={selectedEvidenceRecord.decision.verdict === "ALLOW" ? "pass" : "fail"}>{selectedEvidenceRecord.decision.verdict}</StatusPill>
+                  </div>
+                  <div className="evidence-actions">
+                    <button className="secondary-button" type="button" aria-label="Copy signed evidence as JSON" onClick={() => void copySelectedEvidence()}>
+                      <svg aria-hidden="true" viewBox="0 0 20 20"><rect x="7" y="7" width="9" height="9" /><path d="M13 4H4v9" /></svg>
+                      Copy credential JSON
+                    </button>
+                    <button className="secondary-button" type="button" onClick={downloadSelectedEvidence}>
+                      <svg aria-hidden="true" viewBox="0 0 20 20"><path d="M10 3v9m0 0 4-4m-4 4-4-4M4 16h12" /></svg>
+                      Download JSON
+                    </button>
+                    <span className={`evidence-transfer-state ${evidenceTransferState}`} role="status" aria-live="polite">
+                      {evidenceTransferState === "copied" ? "Credential JSON copied" : evidenceTransferState === "error" ? "Could not copy it. Download the JSON instead." : ""}
+                    </span>
+                  </div>
+                  <p className="evidence-explainer">This signed JSON records what the agent requested, what AgentGate checked, and why it allowed or blocked the request. The local signature can reveal later changes, but it is not a FLINT Stamp.</p>
+                  <div className="evidence-log-grid">
+                    <article><span>Time</span><strong>{new Date(selectedEvidenceRecord.credential.evidence.occurredAt).toLocaleString()}</strong></article>
+                    <article><span>Decision</span><strong>{selectedEvidenceRecord.credential.evidence.outcome.toUpperCase()}</strong></article>
+                    <article><span>Agent</span><strong>{selectedEvidenceRecord.credential.evidence.agentId}</strong></article>
+                    <article><span>Tool credential</span><strong>{selectedEvidenceRecord.credential.evidence.toolPassportId}</strong></article>
+                    <article><span>Requested action</span><strong>{selectedEvidenceRecord.credential.evidence.action}</strong></article>
+                    <article><span>Requested resource</span><strong>{selectedEvidenceRecord.credential.evidence.resource}</strong></article>
+                  </div>
+                  <div className="evidence-bindings">
+                    <div>
+                      <span>Why AgentGate decided</span>
+                      <strong>{summarizeGatewayDecision(selectedEvidenceRecord.decision)}</strong>
+                    </div>
+                    <details>
+                      <summary>Show technical reason codes</summary>
+                      <code>{selectedEvidenceRecord.credential.evidence.reasonCodes.join(" · ")}</code>
+                    </details>
+                    <div>
+                      <span>Policy versions checked</span>
+                      <strong>Agent ability v{selectedEvidenceRecord.credential.evidence.capabilityClaimVersion} · Owner authority v{selectedEvidenceRecord.credential.evidence.semanticAuthorityGrantVersion} · Tool rules v{selectedEvidenceRecord.credential.evidence.toolSemanticContractVersion}</strong>
+                    </div>
+                    <details>
+                      <summary>Show policy fingerprint</summary>
+                      <code>{selectedEvidenceRecord.credential.evidence.policyDigest}</code>
+                      <small>This fingerprint identifies the exact policy records used for the decision.</small>
+                    </details>
+                    <details>
+                      <summary>Show local signature</summary>
+                      <code>{selectedEvidenceRecord.credential.proof.proofValue}</code>
+                      <small>The signature can reveal a changed record. It does not prove the submitted facts are true.</small>
+                    </details>
+                  </div>
+                </section>
+              </div>
+            ) : null}
+
+            {evidenceTab === "records" && !selectedEvidenceRecord ? (
+              <div id="evidence-panel-records">
+                <ViewEmptyState
+                  eyebrow="EVIDENCE / NO DECISIONS"
+                  title="No gateway decisions yet"
+                  body={assignment ? "Run an allowed or out-of-mandate request to create the first signed record." : "Complete the tool assessment and Identity Registry, then test a gateway request."}
+                  actionLabel={assignment ? "Test agent access" : credential ? "Open identity registry" : "Open tool assessments"}
+                  onAction={() => openView(assignment ? "gateway" : credential ? "registry" : "assessments")}
+                />
+              </div>
+            ) : null}
+          </>
         ) : null}
         </div>
       </main>

@@ -39,7 +39,7 @@ For resources, destinations, data classes, and side effects, an empty list means
 | Assessment is CONDITIONAL or FAIL | Review the finding ledger. Destructive behavior, risky instructions, open-world access without destinations, or an open input schema can prevent PASS. |
 | Community Tool Passport is unavailable | Only a complete PASS for the current immutable artifact version is eligible. The Risky example is intentionally ineligible. |
 | Identity registration fails closed | Make MAY NOW a subset of CAN, MAY, and TOOL. Check resources, destinations, data classes, and side effects for one mismatched or broader value. |
-| Gateway says FALLBACK READY | Native `document.modelContext.registerTool` is unavailable. The visible fallback is expected and uses the same authorization path. |
+| Gateway shows Browser demo | Native `document.modelContext.registerTool` is unavailable. The browser demo is expected and uses the same authorization path. |
 | Invocation returns REVIEW | The semantic provider could not establish alignment or returned an error. REVIEW never becomes ALLOW automatically. |
 | You changed an earlier field and later records disappeared | This is intentional stale-state protection. Reassess and repeat the trust loop for the new manifest digest. |
 

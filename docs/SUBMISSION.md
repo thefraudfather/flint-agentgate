@@ -47,7 +47,7 @@ Use `docs/DEMO-SCRIPT.md` and the safe fixture:
 2. Move a synthetic observation through Observed, Correlated, Verified, and Governed states.
 3. Create an assignment from the intersection of capability, authority, and tool semantics.
 4. Invoke the aligned capability and inspect the ALLOW evidence.
-5. Attempt semantic drift and observe BLOCK.
+5. Run the out-of-mandate request and observe BLOCK.
 6. Revoke the Tool Passport and observe the browser surface become unavailable.
 7. Show the risky fixture failing assessment and therefore receiving no credential.
 

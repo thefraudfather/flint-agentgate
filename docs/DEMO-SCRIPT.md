@@ -5,9 +5,11 @@ This script matches the Community build. It does not claim a FLINT Stamp, produc
 ## 0:00–0:25 — Unknown activity becomes an identity candidate
 
 1. Open the default **Catalog lookup** fixture.
-2. Point to **Agent Discovery & Coverage**: one of one synthetic events is observed on the connected gateway surface.
-3. State the blind spot: endpoint and API-direct telemetry are not connected, so the demo does not claim a percentage of all agents.
-4. The observation begins as **SUSPECTED** with 48 percent correlation confidence.
+2. Hover the **Procurement Analyst** in the Community Fleet Constellation and show its locally declared scope and mandate.
+3. Point out that four nodes are sample declarations and only one demo agent is instrumented.
+4. Point to **Agent Discovery & Coverage**: one of one synthetic events is observed on the connected gateway surface.
+5. State the blind spot: endpoint and API-direct telemetry are not connected, so the demo does not claim a percentage of all agents.
+6. The observation begins as **SUSPECTED** with 48 percent correlation confidence.
 
 ## 0:25–1:05 — Assess the exact tool version
 

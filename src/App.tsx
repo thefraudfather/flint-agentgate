@@ -19,6 +19,7 @@ import {
   type GatewaySurfaceState,
 } from "./webmcp/conditionalGateway";
 import type { GatewayInvocationRequest } from "./gateway/runtimeGateway";
+import { CommunityFleetConstellation } from "./components/CommunityFleetConstellation";
 
 type View = "overview" | "registry" | "assessments" | "gateway" | "evidence";
 type FixtureKey = "safe" | "risky";
@@ -53,7 +54,7 @@ function ScoreRing({ report }: { report?: AssessmentReport }) {
         <circle className="score-meter" cx="21" cy="21" r="15.9" pathLength="100" strokeDasharray={`${score} ${100 - score}`} />
       </svg>
       <div>
-        <strong>{report ? score : "–"}</strong>
+        <strong>{report ? score : "N/A"}</strong>
         <span>trust score</span>
       </div>
     </div>
@@ -76,6 +77,7 @@ function App() {
   const [runtimeDecision, setRuntimeDecision] = useState<GatewayDecision>();
   const [invocationEvidence, setInvocationEvidence] = useState<InvocationEvidenceCredential>();
   const [invoking, setInvoking] = useState(false);
+  const [invocationSequence, setInvocationSequence] = useState(0);
   const [scanning, setScanning] = useState(false);
   const [issuing, setIssuing] = useState(false);
   const [error, setError] = useState<string>();
@@ -97,6 +99,7 @@ function App() {
     setScanning(false);
     setIssuing(false);
     setInvoking(false);
+    setInvocationSequence(0);
     setError(undefined);
     setView("overview");
   };
@@ -206,6 +209,9 @@ function App() {
   const invokeTool = async (semanticDrift = false) => {
     if (!gateway || !assignment || !registryContext || !credential) return;
     setInvoking(true);
+    setInvocationSequence((current) => current + 1);
+    setRuntimeDecision(undefined);
+    setInvocationEvidence(undefined);
     setError(undefined);
     try {
       const request: GatewayInvocationRequest = {
@@ -313,6 +319,19 @@ function App() {
           <span>COMMUNITY ASSURANCE</span>
           <p>Credentials issued here are locally self-attested. Their integrity is verifiable, but they are not a FLINT Stamp or FLINT-verified assurance.</p>
         </section>
+
+        <CommunityFleetConstellation
+          primaryName={registryContext?.agentPassport.displayName ?? "Procurement Analyst"}
+          primaryTool={manifest.tools[0].name}
+          primaryScope={manifest.tools[0].capabilities}
+          primaryMandate={registryContext?.authorityGrant.purpose ?? "No active authority grant. Local declaration only."}
+          lifecycleState={identityState}
+          assignmentActive={Boolean(assignment)}
+          verdict={runtimeDecision?.verdict}
+          revoked={gatewaySurface?.eligibility === "ineligible"}
+          invoking={invoking}
+          invocationSequence={invocationSequence}
+        />
 
         <section className="panel coverage-panel" aria-label="Agent discovery and governance coverage">
           <div>

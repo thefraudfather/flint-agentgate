@@ -17,6 +17,8 @@ The Community build adds two replaceable boundaries:
 - `ScannerAdapter`: normalizes any scanner into the stable FLINT Assessment Contract. The bundled Community Scanner is credential-free, read-only, and never executes submitted code.
 - `TrustProvider`: owns submission, assessment, issuance, and verification. The bundled Local Trust Provider is fully usable offline after installation. A future FLINT Command provider can implement the same public interface using managed services.
 
+The Community Fleet Constellation is a presentation adapter over records already supplied to the clone. Four nodes are clearly labeled local sample declarations and one node follows the instrumented demo agent. Motion, hover inspection, and decision-state rendering are public. Autonomous discovery, fingerprint correlation, verified organizational inventory, historical telemetry, and response orchestration remain managed Command capabilities.
+
 ```text
 Community UI
   -> TrustProvider

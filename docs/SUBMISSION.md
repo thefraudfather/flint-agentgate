@@ -28,7 +28,8 @@ The submission-period work includes:
 - deterministic artifact assessment and exact-version community Tool Passports;
 - fail-closed authorization across action, resource, destination, data class, and side effect;
 - invocation-time WebMCP eligibility checks and removal after revocation;
-- signed decision evidence tied to exact policy and artifact versions; and
+- signed decision evidence tied to exact policy and artifact versions;
+- a Community Fleet Constellation that visualizes local declarations and the instrumented demo agent without claiming universal discovery; and
 - a visible fallback that uses the same policy path when native WebMCP is unavailable.
 
 ## Why WebMCP is the right surface

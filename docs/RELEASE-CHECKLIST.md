@@ -21,7 +21,7 @@ The authoritative release is one immutable Git commit. The public repository, Ve
 - [x] Confirm MIT as the public source license.
 - [x] Approve a separate Vercel project and public deployment.
 - [x] Confirm https://flint.network/command/app as the managed-product destination.
-- [ ] Approve public YouTube publication and Devpost submission.
+- [x] Approve public YouTube publication and Devpost submission.
 - [ ] Provide production signing access only if the scope changes from Community credentials; never place it in this repository or client bundle.
 
 ## Public repository and deployment
@@ -38,9 +38,9 @@ The authoritative release is one immutable Git commit. The public repository, Ve
 
 ## Video and Devpost
 
-- [ ] Record the exact `docs/DEMO-SCRIPT.md` flow with intelligible audio and a runtime under three minutes.
-- [ ] Use only authorized FLINT assets, third-party marks, and audio.
-- [ ] Publish the video publicly on YouTube and test it signed out.
+- [x] Record the exact `docs/DEMO-SCRIPT.md` flow with intelligible audio and a runtime under three minutes.
+- [x] Use only authorized FLINT assets, third-party marks, and audio.
+- [x] Publish the video publicly on YouTube and test it signed out.
 - [ ] Complete the project description, WebMCP implementation explanation, repo URL, live URL, and video URL.
 - [ ] Submit before the internal target of September 3, 2026 at 10:00 AM PDT.
 - [ ] Reopen the submitted entry once and verify every link.

@@ -82,7 +82,7 @@ function App() {
   const [error, setError] = useState<string>();
   const manifest: ArtifactManifest = fixtureKey === "safe" ? safeManifest : riskyManifest;
 
-  useEffect(() => {
+  const resetDemo = () => {
     setProvider(new LocalTrustProvider());
     setSubmission(undefined);
     setReport(undefined);
@@ -95,7 +95,15 @@ function App() {
     setGatewaySurface(undefined);
     setRuntimeDecision(undefined);
     setInvocationEvidence(undefined);
+    setScanning(false);
+    setIssuing(false);
+    setInvoking(false);
     setError(undefined);
+    setView("overview");
+  };
+
+  useEffect(() => {
+    resetDemo();
   }, [fixtureKey]);
 
   const runAssessment = async () => {
@@ -297,6 +305,7 @@ function App() {
           </div>
           <div className="topbar-actions">
             <StatusPill tone="demo">DEMO DATA</StatusPill>
+            <button className="secondary-button reset-button" type="button" onClick={resetDemo}>Reset demo</button>
             <button className="secondary-button" type="button" onClick={() => setView("evidence")}>View evidence</button>
           </div>
         </header>
@@ -304,6 +313,41 @@ function App() {
         <section className="notice" aria-label="Community assurance notice">
           <span>COMMUNITY ASSURANCE</span>
           <p>Credentials issued here are locally self-attested. Their integrity is verifiable, but they are not a FLINT Stamp or FLINT-verified assurance.</p>
+        </section>
+
+        <section className="panel coverage-panel" aria-label="Agent discovery and governance coverage">
+          <div>
+            <p className="eyebrow">AGENT DISCOVERY & COVERAGE</p>
+            <h2>Measured only on connected demo surfaces</h2>
+            <p>One synthetic gateway event is in scope. Endpoint and API-direct activity are explicitly unobserved.</p>
+          </div>
+          <div className="coverage-metrics">
+            <article>
+              <span>Observed activity coverage</span>
+              <strong>1 / 1</strong>
+              <small>Gateway events on the instrumented demo surface</small>
+            </article>
+            <article>
+              <span>Governed activity coverage</span>
+              <strong>{identityState === "governed" ? "1 / 1" : "0 / 1"}</strong>
+              <small>{identityState === "governed" ? "Passport and assignment current" : "No current governed identity yet"}</small>
+            </article>
+            <article>
+              <span>Attribution state</span>
+              <strong>{identityState === "observed" ? "SUSPECTED" : identityState.toUpperCase()}</strong>
+              <small>Simulated evidence · confidence {registryContext?.observedAgent.confidence ?? 48}%</small>
+            </article>
+            <article>
+              <span>Unobserved activity</span>
+              <strong>NOT MEASURABLE</strong>
+              <small>Never presented as “percent of all agents”</small>
+            </article>
+          </div>
+          <div className="sensor-strip">
+            <span><b>CONNECTED</b> WebMCP Gateway</span>
+            <span><b>BLIND SPOT</b> Endpoint + API-direct telemetry</span>
+            <span><b>CLASSIFICATION</b> Verified / Correlated / Suspected kept distinct</span>
+          </div>
         </section>
 
         <section className="workflow-steps" aria-label="Tool assurance workflow">

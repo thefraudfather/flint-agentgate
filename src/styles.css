@@ -186,10 +186,23 @@ h2 { margin-bottom: 0; font-size: 17px; line-height: 1.3; letter-spacing: -0.015
 
 .notice span { color: var(--amber); font: 10px ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.08em; white-space: nowrap; }
 .notice p { margin: 0; color: #c7d2d8; font-size: 12px; }
+.coverage-panel { margin: 0 0 16px; padding: 20px; }
+.coverage-panel > div:first-child { max-width: 760px; }
+.coverage-panel h2 { margin: 3px 0 5px; }
+.coverage-panel > div:first-child > p:last-child { color: var(--muted); margin: 0; font-size: 13px; }
+.coverage-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 16px; }
+.coverage-metrics article { padding: 14px; border: 1px solid var(--line); background: rgba(255,255,255,.025); }
+.coverage-metrics span, .coverage-metrics small { display: block; color: var(--muted); }
+.coverage-metrics span { font-size: 11px; letter-spacing: .07em; text-transform: uppercase; }
+.coverage-metrics strong { display: block; margin: 7px 0 5px; font-size: 17px; }
+.coverage-metrics small { font-size: 11px; line-height: 1.4; }
+.sensor-strip { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.sensor-strip span { border: 1px solid var(--line); padding: 7px 9px; color: var(--muted); font-size: 11px; }
+.sensor-strip b { color: var(--text); font-size: 10px; margin-right: 5px; }
 
 .workflow-steps {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   margin-bottom: 16px;
   border: 1px solid var(--line);
   background: #050c11;
@@ -410,6 +423,7 @@ h2 { margin-bottom: 0; font-size: 17px; line-height: 1.3; letter-spacing: -0.015
   .policy-strip { align-items: flex-start; flex-wrap: wrap; }
   .gateway-status-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .runtime-receipt { grid-template-columns: 1fr; }
+  .coverage-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .policy-flow { order: 3; width: 100%; overflow-x: auto; padding-bottom: 4px; }
 }
 
@@ -424,6 +438,7 @@ h2 { margin-bottom: 0; font-size: 17px; line-height: 1.3; letter-spacing: -0.015
   .topbar { align-items: flex-start; flex-direction: column; }
   .topbar > div:first-child { min-width: 0; }
   .secondary-button { display: none; }
+  .reset-button { display: inline-flex; align-items: center; }
   .metric-grid { grid-template-columns: 1fr 1fr; }
   .metric-grid article:nth-child(2) { border-right: 0; }
   .metric-grid article:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
@@ -434,6 +449,7 @@ h2 { margin-bottom: 0; font-size: 17px; line-height: 1.3; letter-spacing: -0.015
   .assurance-grid { grid-template-columns: 1fr 1fr; }
   .registry-intersection { grid-template-columns: 1fr 1fr; }
   .managed-callout { align-items: flex-start; flex-direction: column; }
+  .coverage-metrics { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 480px) {

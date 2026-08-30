@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-Do not open a public issue containing exploit details, credentials, private data, or a working attack against a deployed FLINT system. Report security concerns through the contact path at https://flint.network/ and include the affected version, reproduction conditions, impact, and a safe proof of concept when possible.
+Do not open a public issue containing exploit details, credentials, private data, or a working attack against a deployed FLINT system. Report security concerns to contact@flint.network and include the affected version, reproduction conditions, impact, and a safe proof of concept when possible.
 
 ## Prototype boundary
 

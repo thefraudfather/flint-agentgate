@@ -1,6 +1,6 @@
 # FLINT AgentGate
 
-FLINT AgentGate is an enterprise trust gateway for AI agents and MCP tools. It combines a verified identity registry, semantic authority, exact-version tool assessments, runtime policy enforcement, and signed evidence.
+FLINT AgentGate is an enterprise trust gateway for AI agents and MCP tools. It combines a versioned identity registry, semantic authority, exact-version tool assessments, runtime policy enforcement, and signed evidence.
 
 This repository is an isolated hackathon prototype. It does not modify or deploy the production FLINT MVP.
 
@@ -43,6 +43,12 @@ npm run build
 npm run dev
 ```
 
+Before publishing a release candidate, run the complete reproducible gate:
+
+```bash
+npm run release:check
+```
+
 The local development server binds to `127.0.0.1:4173`.
 
 The default demo flow is:
@@ -57,9 +63,19 @@ The default demo flow is:
 
 All demo state and signing keys are ephemeral to the browser session.
 
+## WebMCP registration
+
+AgentGate feature-detects native WebMCP and exposes only tools whose exact assignment remains eligible. The native registration path uses the browser API directly:
+
+```ts
+document.modelContext.registerTool(definition);
+```
+
+The registered handler re-resolves the assignment and policy at invocation time. In browsers without WebMCP, the visible fallback runs the same provider and policy path instead of simulating native registration.
+
 ## Architecture
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/ASSESSMENT-CONTRACT.md](docs/ASSESSMENT-CONTRACT.md), [docs/THREAT-MODEL.md](docs/THREAT-MODEL.md), and the exact [three-minute demo script](docs/DEMO-SCRIPT.md).
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/ASSESSMENT-CONTRACT.md](docs/ASSESSMENT-CONTRACT.md), [docs/THREAT-MODEL.md](docs/THREAT-MODEL.md), the exact [three-minute demo script](docs/DEMO-SCRIPT.md), the [submission brief](docs/SUBMISSION.md), and the [release checklist](docs/RELEASE-CHECKLIST.md).
 
 Security reports should follow [SECURITY.md](SECURITY.md). Contributions should follow [CONTRIBUTING.md](CONTRIBUTING.md). FLINT names and verification marks are governed separately from the source license; see [TRADEMARKS.md](TRADEMARKS.md).
 

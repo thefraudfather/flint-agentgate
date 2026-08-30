@@ -17,6 +17,12 @@ export type DocumentWithModelContext = {
   modelContext?: ModelContextLike;
 };
 
+declare global {
+  interface Document {
+    modelContext?: ModelContextLike;
+  }
+}
+
 export type GatewaySurfaceState = {
   supported: boolean;
   mode: "webmcp" | "fallback";
@@ -30,12 +36,23 @@ export function supportsWebMcp(documentLike: DocumentWithModelContext | undefine
   return typeof documentLike?.modelContext?.registerTool === "function";
 }
 
+export function getNativeWebMcpDocument(): DocumentWithModelContext | undefined {
+  return typeof document === "undefined" ? undefined : document;
+}
+
+export function registerNativeWebMcpTool(definition: WebMcpToolDefinition): void | (() => void) {
+  if (typeof document === "undefined" || !supportsWebMcp(document)) {
+    throw new Error("WebMCP is unavailable in this browser.");
+  }
+  return document.modelContext.registerTool(definition);
+}
+
 export class ConditionalWebMcpGateway {
   readonly provider: TrustProvider;
   readonly documentLike?: DocumentWithModelContext;
   #registered = new Map<string, { assignmentId: string; dispose?: () => void }>();
 
-  constructor(provider: TrustProvider, documentLike?: DocumentWithModelContext) {
+  constructor(provider: TrustProvider, documentLike = getNativeWebMcpDocument()) {
     this.provider = provider;
     this.documentLike = documentLike;
   }
@@ -82,7 +99,7 @@ export class ConditionalWebMcpGateway {
       return { supported: true, mode: "webmcp", eligibility: "registered", detail: "Eligible tool is registered through WebMCP." };
     }
     this.#remove(input.name);
-    const dispose = this.documentLike.modelContext.registerTool({
+    const definition: WebMcpToolDefinition = {
       name: input.name,
       description: input.description,
       inputSchema: input.inputSchema ?? { type: "object", properties: {}, additionalProperties: true },
@@ -95,7 +112,10 @@ export class ConditionalWebMcpGateway {
         }
         return result;
       },
-    });
+    };
+    const dispose = this.documentLike === getNativeWebMcpDocument()
+      ? registerNativeWebMcpTool(definition)
+      : this.documentLike.modelContext.registerTool(definition);
     this.#registered.set(input.name, { assignmentId: input.assignmentId, dispose: typeof dispose === "function" ? dispose : undefined });
     return { supported: true, mode: "webmcp", eligibility: "registered", detail: "Eligible tool is registered through WebMCP." };
   }

@@ -7,6 +7,7 @@ import { seedDemoRegistry } from "../src/registry/demoRegistry";
 import { safeManifest } from "../src/scanner/fixtures";
 import {
   ConditionalWebMcpGateway,
+  registerNativeWebMcpTool,
   type WebMcpToolDefinition,
 } from "../src/webmcp/conditionalGateway";
 
@@ -144,6 +145,34 @@ test("unsupported browsers expose a truthful fallback, not fake WebMCP", async (
     mode: "fallback",
     eligibility: "registered",
   });
+});
+
+test("native WebMCP helper registers through document.modelContext", () => {
+  let registered: WebMcpToolDefinition | undefined;
+  const original = Object.getOwnPropertyDescriptor(globalThis, "document");
+  Object.defineProperty(globalThis, "document", {
+    configurable: true,
+    value: {
+      modelContext: {
+        registerTool(definition: WebMcpToolDefinition) {
+          registered = definition;
+        },
+      },
+    },
+  });
+
+  try {
+    registerNativeWebMcpTool({
+      name: "catalog.lookup",
+      description: "Catalog lookup",
+      inputSchema: { type: "object" },
+      execute: async () => ({ ok: true }),
+    });
+    assert.equal(registered?.name, "catalog.lookup");
+  } finally {
+    if (original) Object.defineProperty(globalThis, "document", original);
+    else Reflect.deleteProperty(globalThis, "document");
+  }
 });
 
 test("WebMCP registration is removed and stale handlers deny after revocation", async () => {

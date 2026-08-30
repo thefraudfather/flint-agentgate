@@ -16,7 +16,6 @@ import { seedDemoRegistry } from "./registry/demoRegistry";
 import { safeManifest, riskyManifest } from "./scanner/fixtures";
 import {
   ConditionalWebMcpGateway,
-  type DocumentWithModelContext,
   type GatewaySurfaceState,
 } from "./webmcp/conditionalGateway";
 import type { GatewayInvocationRequest } from "./gateway/runtimeGateway";
@@ -176,7 +175,7 @@ function App() {
       observation = provider.registry.transitionObservedAgent(observation.id, "governed");
       setAssignment(nextAssignment);
       setIdentityState(observation.state);
-      const nextGateway = new ConditionalWebMcpGateway(provider, document as unknown as DocumentWithModelContext);
+      const nextGateway = new ConditionalWebMcpGateway(provider);
       const buildRequest = (toolInput: unknown): GatewayInvocationRequest => ({
         id: `invocation:browser:${Date.now()}`,
         assignmentId: nextAssignment.id,

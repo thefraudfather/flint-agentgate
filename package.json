@@ -4,11 +4,18 @@
   "version": "0.1.0",
   "type": "module",
   "license": "MIT",
+  "engines": {
+    "node": ">=22 <25",
+    "npm": ">=10"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "test": "tsx --test tests/*.test.ts",
     "typecheck": "tsc -b --pretty false",
+    "verify": "npm run typecheck && npm test && npm run build",
+    "release:scan": "node scripts/release-check.mjs",
+    "release:check": "npm run release:scan && npm run verify && npm audit --omit=dev --audit-level=high",
     "preview": "vite preview"
   },
   "dependencies": {

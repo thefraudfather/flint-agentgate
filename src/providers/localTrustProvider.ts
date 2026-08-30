@@ -1,20 +1,25 @@
 import {
   createCommunityIssuer,
+  issueCommunityInvocationEvidence,
   issueCommunityToolPassport,
   verifyCommunityToolPassport,
   type CommunityIssuer,
 } from "../credentials/communityIssuer";
-import type {
-  ArtifactManifest,
-  ArtifactVersion,
-  AssessmentReport,
-  ToolPassportCredential,
+import {
+  contractVersion,
+  invocationEvidenceSchema,
+  type InvocationEvidence,
+  type ArtifactManifest,
+  type ArtifactVersion,
+  type AssessmentReport,
+  type ToolPassportCredential,
 } from "../domain/contracts";
 import { createPublisherIntake } from "../registry/publisherIntake";
 import { IdentityRegistry } from "../registry/identityRegistry";
 import { communityScanner } from "../scanner/communityScanner";
 import type { ScannerAdapter } from "../scanner/adapter";
 import type { RegistryAssignmentInput, SubmissionResult, TrustProvider } from "./trustProvider";
+import { evaluateResolvedInvocation, type GatewayInvocationRequest, type SemanticIntegrityProvider } from "../gateway/runtimeGateway";
 
 export class LocalTrustProvider implements TrustProvider {
   readonly id = "flint.agentgate.community-local";
@@ -87,6 +92,51 @@ export class LocalTrustProvider implements TrustProvider {
 
   resolveAssignment(assignmentId: string, options: { now?: string } = {}) {
     return this.registry.resolveAssignment(assignmentId, options);
+  }
+
+  async evaluateInvocation(
+    request: GatewayInvocationRequest,
+    options: { now?: string; semanticProvider?: SemanticIntegrityProvider } = {},
+  ) {
+    const resolved = this.registry.resolveAssignment(request.assignmentId, { now: options.now });
+    const issuer = await this.#getIssuer();
+    const { decision, inputDigest } = await evaluateResolvedInvocation({
+      request,
+      resolved,
+      semanticProvider: options.semanticProvider,
+      now: options.now,
+    });
+    const evidence: InvocationEvidence = invocationEvidenceSchema.parse({
+      contractVersion,
+      id: `invocation-evidence:${request.id}`,
+      requestId: request.id,
+      decisionId: decision.id,
+      organizationId: resolved.assignment.organizationId,
+      issuerId: issuer.issuerId,
+      agentId: resolved.agentPassport.id,
+      toolPassportId: resolved.credential.passport.id,
+      artifactDigest: resolved.credential.passport.artifactDigest,
+      capabilityClaimId: resolved.capabilityClaim.id,
+      capabilityClaimVersion: resolved.capabilityClaim.version,
+      semanticAuthorityGrantId: resolved.authorityGrant.id,
+      semanticAuthorityGrantVersion: resolved.authorityGrant.version,
+      toolSemanticContractId: resolved.toolContract.id,
+      toolSemanticContractVersion: resolved.toolContract.version,
+      assignmentId: resolved.assignment.id,
+      action: request.action,
+      resource: request.resource,
+      destination: request.destination,
+      inputDigest,
+      policyDigest: decision.policyDigest,
+      verdict: decision.verdict,
+      reasonCodes: decision.reasonCodes,
+      outcome: decision.verdict === "ALLOW" ? "allowed" : "blocked",
+      occurredAt: decision.evaluatedAt,
+    });
+    return {
+      decision,
+      evidenceCredential: await issueCommunityInvocationEvidence({ issuer, evidence }),
+    };
   }
 
   freezeAgent(agentPassportId: string) {

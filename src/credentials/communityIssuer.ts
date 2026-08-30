@@ -2,12 +2,16 @@ import { canonicalJson, sha256 } from "../domain/canonicalize";
 import {
   assessmentReportSchema,
   contractVersion,
+  invocationEvidenceCredentialSchema,
+  invocationEvidenceSchema,
   publicVerificationKeySchema,
   toolPassportCredentialSchema,
   toolPassportSchema,
   type ArtifactVersion,
   type AssessmentReport,
   type PublicVerificationKey,
+  type InvocationEvidence,
+  type InvocationEvidenceCredential,
   type ToolPassportCredential,
 } from "../domain/contracts";
 
@@ -53,6 +57,18 @@ function signingPayload(
     contractVersion,
     credentialType: "ToolPassportCredential" as const,
     passport,
+    proof,
+  };
+}
+
+function evidenceSigningPayload(
+  evidence: InvocationEvidence,
+  proof: Omit<InvocationEvidenceCredential["proof"], "proofValue">,
+) {
+  return {
+    contractVersion,
+    credentialType: "InvocationEvidenceCredential" as const,
+    evidence,
     proof,
   };
 }
@@ -203,4 +219,60 @@ export async function verifyCommunityToolPassport(
     assuranceLevel: "community-self-attested",
     reasonCodes: reasons.length === 0 ? ["COMMUNITY_CREDENTIAL_INTEGRITY_VERIFIED"] : reasons,
   };
+}
+
+export async function issueCommunityInvocationEvidence(input: {
+  issuer: CommunityIssuer;
+  evidence: InvocationEvidence;
+}): Promise<InvocationEvidenceCredential> {
+  const evidence = invocationEvidenceSchema.parse(input.evidence);
+  const proof = {
+    type: "DataIntegrityProof" as const,
+    cryptosuite: "ecdsa-p256-sha256" as const,
+    createdAt: evidence.occurredAt,
+    verificationMethod: input.issuer.keyId,
+    publicKeyJwk: input.issuer.publicKeyJwk,
+  };
+  const signature = await crypto.subtle.sign(
+    { name: "ECDSA", hash: "SHA-256" },
+    input.issuer.privateKey,
+    new TextEncoder().encode(canonicalJson(evidenceSigningPayload(evidence, proof))),
+  );
+  return invocationEvidenceCredentialSchema.parse({
+    contractVersion,
+    credentialType: "InvocationEvidenceCredential",
+    evidence,
+    proof: { ...proof, proofValue: encodeBase64Url(new Uint8Array(signature)) },
+  });
+}
+
+export async function verifyCommunityInvocationEvidence(input: unknown): Promise<{
+  integrityValid: boolean;
+  reasonCodes: string[];
+}> {
+  const parsed = invocationEvidenceCredentialSchema.safeParse(input);
+  if (!parsed.success) return { integrityValid: false, reasonCodes: ["INVOCATION_EVIDENCE_INVALID"] };
+  try {
+    const credential = parsed.data;
+    const { proofValue, ...proof } = credential.proof;
+    const publicKey = await crypto.subtle.importKey(
+      "jwk",
+      proof.publicKeyJwk,
+      { name: "ECDSA", namedCurve: "P-256" },
+      false,
+      ["verify"],
+    );
+    const integrityValid = await crypto.subtle.verify(
+      { name: "ECDSA", hash: "SHA-256" },
+      publicKey,
+      decodeBase64Url(proofValue),
+      new TextEncoder().encode(canonicalJson(evidenceSigningPayload(credential.evidence, proof))),
+    );
+    return {
+      integrityValid,
+      reasonCodes: [integrityValid ? "INVOCATION_EVIDENCE_INTEGRITY_VERIFIED" : "INVOCATION_EVIDENCE_SIGNATURE_INVALID"],
+    };
+  } catch {
+    return { integrityValid: false, reasonCodes: ["INVOCATION_EVIDENCE_SIGNATURE_INVALID"] };
+  }
 }

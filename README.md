@@ -24,7 +24,11 @@ This repository is the cloneable **AgentGate Community** reference implementatio
 - Separate, versioned Agent Passport, Capability Claim, Semantic Authority Grant, Tool Semantic Contract, and Assignment Grant records.
 - An assignment policy that rejects any requested action, resource, data class, destination, or side effect outside the complete authorization intersection.
 - Distinct Observed, Correlated, Verified, and Governed agent states with evidence and blind-spot disclosure.
-- A gateway evaluator that requires the intersection of agent authority, active Tool Passport, active assignment, and request context.
+- A gateway evaluator that requires the intersection of agent authority, active Tool Passport, active assignment, exact tool semantics, and request context.
+- A deterministic-first Semantic Integrity boundary that may escalate ALLOW to REVIEW or BLOCK but can never override a deterministic denial.
+- Signed P-256 invocation evidence binding the decision to exact capability, authority, contract, assignment, artifact, input, and policy versions.
+- Conditional `document.modelContext.registerTool` exposure with a truthful visible fallback when WebMCP is unavailable.
+- Invocation-time eligibility re-resolution so freeze, revocation, and expiry remove the tool or deny stale registered handlers.
 - A responsive Command-style interface with two clearly labeled demo artifacts.
 - Tests for the stable contracts, safe and risky assessments, and semantic authorization boundaries.
 
@@ -48,6 +52,8 @@ The default demo flow is:
 3. Issue a community Tool Passport only for the passing fixture.
 4. Verify the local signature and inspect the explicit assurance level.
 5. Claim the synthetic observed agent and assign only the eligible intersection of agent capability, principal authority, and exact-version tool semantics.
+6. Invoke the eligible tool through the WebMCP surface or clearly labeled fallback and inspect the signed evidence.
+7. Attempt semantic drift, then revoke the Tool Passport to see the invocation block and available surface change.
 
 All demo state and signing keys are ephemeral to the browser session.
 

@@ -24,6 +24,8 @@ Community UI
       -> ScannerAdapter
       -> Assessment Contract
       -> Tool Passport issuer and verifier
+      -> Runtime decision and signed invocation evidence
+  -> Conditional WebMCP Gateway or truthful visible fallback
 ```
 
 ## Stable objects
@@ -47,6 +49,7 @@ All durable objects declare `contractVersion: agentgate.v0` and are validated at
 - `ToolAssignment`
 - `GatewayDecision`
 - `InvocationEvidence`
+- `InvocationEvidenceCredential`
 
 An assessment and Tool Passport bind to the canonical SHA-256 digest of one artifact version. Any code or manifest change requires a new assessment.
 
@@ -110,7 +113,17 @@ AND active tool assignment
 AND current request context
 ```
 
-Deny rules are evaluated before allow rules. Status, expiry, action, resource, data class, destination, and transaction limits remain outside the model and are enforced by code.
+Deny rules are evaluated before allow rules. Status, expiry, action, resource, data class, destination, side effect, and transaction limits remain outside the model and are enforced by code.
+
+The Registry resolves every dependency at invocation time. Deterministic checks run before the `SemanticIntegrityProvider`; if any deterministic condition fails, the semantic provider is not called. Semantic evaluation can escalate an otherwise valid request to REVIEW or BLOCK, but it cannot turn a deterministic denial into ALLOW. Provider failure produces REVIEW, never ALLOW.
+
+Every successfully resolved invocation emits a locally signed `InvocationEvidenceCredential`. Its payload binds the request and decision to the exact Agent Capability Claim version, Semantic Authority Grant version, Tool Semantic Contract version, Assignment Grant, Tool Passport artifact digest, input digest, and policy digest. The record contains digests and reason codes rather than raw prompts, credentials, or tool output.
+
+## Conditional WebMCP exposure
+
+The browser adapter feature-detects `document.modelContext.registerTool`. If present, it registers only a currently resolvable assignment. If absent, the interface says that WebMCP is unavailable and exposes a visible fallback that calls the same provider and policy path; it never claims a native browser registration occurred.
+
+Eligibility is checked when the surface is synchronized and again inside the registered handler. Freeze, revocation, expiry, or dependency failure removes the registration when an unregister mechanism exists. A stale browser handler still fails closed because invocation re-resolves the assignment before evaluation.
 
 ## Initial deployment boundary
 

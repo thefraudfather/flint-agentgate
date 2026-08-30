@@ -498,6 +498,10 @@ export const gatewayDecisionSchema = z.object({
   reasonCodes: z.array(idSchema).min(1).max(32),
   evaluatedAt: z.string().datetime(),
   policyDigest: digestSchema,
+  semanticIntegrity: z.object({
+    status: z.enum(["not-evaluated", "aligned", "uncertain", "misaligned", "error"]),
+    reasonCodes: z.array(idSchema).min(1).max(16),
+  }).optional(),
 });
 
 export const invocationEvidenceSchema = z.object({
@@ -506,15 +510,55 @@ export const invocationEvidenceSchema = z.object({
   requestId: idSchema,
   decisionId: idSchema,
   organizationId: idSchema,
+  issuerId: idSchema,
   agentId: idSchema,
   toolPassportId: idSchema,
+  artifactDigest: digestSchema,
+  capabilityClaimId: idSchema,
+  capabilityClaimVersion: z.number().int().positive(),
+  semanticAuthorityGrantId: idSchema,
+  semanticAuthorityGrantVersion: z.number().int().positive(),
+  toolSemanticContractId: idSchema,
+  toolSemanticContractVersion: z.number().int().positive(),
+  assignmentId: idSchema,
   action: nonEmptySchema,
   resource: z.string().max(1000),
   destination: z.string().max(1000),
   inputDigest: digestSchema,
+  policyDigest: digestSchema,
+  verdict: z.enum(["ALLOW", "STEP_UP", "REVIEW", "BLOCK"]),
+  reasonCodes: z.array(idSchema).min(1).max(32),
   outcome: z.enum(["allowed", "blocked", "failed", "completed"]),
   occurredAt: z.string().datetime(),
-  signature: z.string().min(16),
+});
+
+export const invocationEvidenceCredentialSchema = z.object({
+  contractVersion: z.literal(contractVersion),
+  credentialType: z.literal("InvocationEvidenceCredential"),
+  evidence: invocationEvidenceSchema,
+  proof: z.object({
+    type: z.literal("DataIntegrityProof"),
+    cryptosuite: z.literal("ecdsa-p256-sha256"),
+    createdAt: z.string().datetime(),
+    verificationMethod: z.string().min(5).max(240).regex(/^[a-zA-Z0-9_.:#-]+$/),
+    publicKeyJwk: publicVerificationKeySchema,
+    proofValue: z.string().regex(/^[A-Za-z0-9_-]+$/).min(16),
+  }),
+}).superRefine((credential, context) => {
+  if (!credential.proof.verificationMethod.startsWith(`${credential.evidence.issuerId}#`)) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["proof", "verificationMethod"],
+      message: "Proof verification method must be controlled by the evidence issuer.",
+    });
+  }
+  if (credential.proof.createdAt !== credential.evidence.occurredAt) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["proof", "createdAt"],
+      message: "Proof creation time must match invocation evidence time.",
+    });
+  }
 });
 
 export type ArtifactManifest = z.infer<typeof artifactManifestSchema>;
@@ -538,4 +582,5 @@ export type AssignmentGrant = z.infer<typeof assignmentGrantSchema>;
 export type ToolAssignment = z.infer<typeof toolAssignmentSchema>;
 export type GatewayDecision = z.infer<typeof gatewayDecisionSchema>;
 export type InvocationEvidence = z.infer<typeof invocationEvidenceSchema>;
+export type InvocationEvidenceCredential = z.infer<typeof invocationEvidenceCredentialSchema>;
 export type StampIssuanceDecision = z.infer<typeof stampIssuanceDecisionSchema>;

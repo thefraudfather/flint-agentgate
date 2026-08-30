@@ -21,6 +21,9 @@ This repository is the cloneable **AgentGate Community** reference implementatio
 - Locally generated P-256 signing keys, signed community Tool Passports, and integrity verification.
 - An assurance boundary that prevents community credentials from claiming a FLINT Stamp.
 - A Local Trust Provider that can later be replaced by a managed Command provider without changing public contracts.
+- Separate, versioned Agent Passport, Capability Claim, Semantic Authority Grant, Tool Semantic Contract, and Assignment Grant records.
+- An assignment policy that rejects any requested action, resource, data class, destination, or side effect outside the complete authorization intersection.
+- Distinct Observed, Correlated, Verified, and Governed agent states with evidence and blind-spot disclosure.
 - A gateway evaluator that requires the intersection of agent authority, active Tool Passport, active assignment, and request context.
 - A responsive Command-style interface with two clearly labeled demo artifacts.
 - Tests for the stable contracts, safe and risky assessments, and semantic authorization boundaries.
@@ -44,6 +47,7 @@ The default demo flow is:
 2. Submit and assess its exact version.
 3. Issue a community Tool Passport only for the passing fixture.
 4. Verify the local signature and inspect the explicit assurance level.
+5. Claim the synthetic observed agent and assign only the eligible intersection of agent capability, principal authority, and exact-version tool semantics.
 
 All demo state and signing keys are ephemeral to the browser session.
 

@@ -31,7 +31,10 @@ Community UI
 All durable objects declare `contractVersion: agentgate.v0` and are validated at runtime.
 
 - `PrincipalIdentity`
-- `AgentIdentity` with `SemanticAuthority`
+- `ObservedAgent` with an explicit observed, correlated, verified, or governed state
+- `AgentPassport` containing identity but no mutable authority
+- `AgentCapabilityClaim` describing what the agent can technically do
+- `SemanticAuthorityGrant` describing what the bound principal allows
 - `ArtifactManifest`
 - `PublisherPassport`
 - `ArtifactVersion`
@@ -39,11 +42,30 @@ All durable objects declare `contractVersion: agentgate.v0` and are validated at
 - `Stamp`
 - `ToolPassport`
 - `ToolPassportCredential`
+- `ToolSemanticContract` describing the exact assessed tool version
+- `AssignmentGrant` containing only the permitted intersection
 - `ToolAssignment`
 - `GatewayDecision`
 - `InvocationEvidence`
 
 An assessment and Tool Passport bind to the canonical SHA-256 digest of one artifact version. Any code or manifest change requires a new assessment.
+
+## Identity and assignment registry
+
+The Registry preserves the distinction between capability and authority:
+
+```text
+Effective capability
+  = Agent Capability Claim
+  ∩ Principal Semantic Authority Grant
+  ∩ exact-version Tool Semantic Contract
+  ∩ organization and lifecycle state
+  ∩ Assignment Grant
+```
+
+The assignment policy accepts only requested subsets. Prefix-wildcard resources and destinations are compared directionally so a narrow request can fit inside a broader grant, but a broader requested wildcard cannot fit inside a narrow grant. Denied actions are evaluated before issuance.
+
+Agent observations advance one evidence-backed state at a time: Observed → Correlated → Verified → Governed. Verified requires a linked Agent Passport. Governed requires an active, currently resolvable assignment. Freeze, revocation, expiry, missing dependencies, inactive principals or organizations, and artifact-version mismatch fail closed.
 
 ## Assessment pipeline
 

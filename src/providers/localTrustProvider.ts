@@ -11,14 +11,16 @@ import type {
   ToolPassportCredential,
 } from "../domain/contracts";
 import { createPublisherIntake } from "../registry/publisherIntake";
+import { IdentityRegistry } from "../registry/identityRegistry";
 import { communityScanner } from "../scanner/communityScanner";
 import type { ScannerAdapter } from "../scanner/adapter";
-import type { SubmissionResult, TrustProvider } from "./trustProvider";
+import type { RegistryAssignmentInput, SubmissionResult, TrustProvider } from "./trustProvider";
 
 export class LocalTrustProvider implements TrustProvider {
   readonly id = "flint.agentgate.community-local";
   readonly mode = "community-local" as const;
   readonly scanner: ScannerAdapter;
+  readonly registry = new IdentityRegistry();
 
   #issuer?: CommunityIssuer;
   #artifactVersions = new Map<string, ArtifactVersion>();
@@ -70,6 +72,8 @@ export class LocalTrustProvider implements TrustProvider {
       now: options.now,
     });
     this.#credentials.set(credential.passport.id, credential);
+    const verification = await verifyCommunityToolPassport(credential, { now: options.now });
+    this.registry.registerToolCredential(credential, verification);
     return credential;
   }
 
@@ -77,11 +81,28 @@ export class LocalTrustProvider implements TrustProvider {
     return verifyCommunityToolPassport(credential, options);
   }
 
+  createAssignment(input: RegistryAssignmentInput) {
+    return this.registry.createAssignment(input);
+  }
+
+  resolveAssignment(assignmentId: string, options: { now?: string } = {}) {
+    return this.registry.resolveAssignment(assignmentId, options);
+  }
+
+  freezeAgent(agentPassportId: string) {
+    this.registry.freezeAgent(agentPassportId);
+  }
+
+  revokeToolPassport(toolPassportId: string) {
+    this.registry.revokeToolPassport(toolPassportId);
+  }
+
   snapshot() {
     return {
       artifactVersions: [...this.#artifactVersions.values()],
       assessments: [...this.#assessments.values()],
       credentials: [...this.#credentials.values()],
+      registry: this.registry.snapshot(),
     };
   }
 }

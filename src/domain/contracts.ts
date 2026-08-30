@@ -43,6 +43,94 @@ export const principalIdentitySchema = z.object({
   status: statusSchema,
 });
 
+export const organizationIdentitySchema = z.object({
+  contractVersion: z.literal(contractVersion),
+  id: idSchema,
+  displayName: nonEmptySchema,
+  status: statusSchema,
+});
+
+export const observedAgentStateSchema = z.enum(["observed", "correlated", "verified", "governed"]);
+
+export const observedAgentSchema = z.object({
+  contractVersion: z.literal(contractVersion),
+  id: idSchema,
+  organizationId: idSchema.optional(),
+  state: observedAgentStateSchema,
+  confidence: z.number().int().min(0).max(100),
+  evidenceSources: z.array(nonEmptySchema).min(1).max(64),
+  instrumentedSurfaces: z.array(nonEmptySchema).min(1).max(32),
+  firstSeenAt: z.string().datetime(),
+  lastSeenAt: z.string().datetime(),
+  linkedAgentPassportId: idSchema.optional(),
+  blindSpots: z.array(nonEmptySchema).max(32).default([]),
+}).superRefine((agent, context) => {
+  if (new Date(agent.lastSeenAt) < new Date(agent.firstSeenAt)) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["lastSeenAt"],
+      message: "Last-seen time cannot predate first-seen time.",
+    });
+  }
+  if (["verified", "governed"].includes(agent.state) && !agent.linkedAgentPassportId) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["linkedAgentPassportId"],
+      message: "Verified and governed observations require a linked Agent Passport.",
+    });
+  }
+});
+
+export const agentPassportSchema = z.object({
+  contractVersion: z.literal(contractVersion),
+  id: idSchema,
+  organizationId: idSchema,
+  principalId: idSchema,
+  displayName: nonEmptySchema,
+  fingerprint: digestSchema,
+  status: statusSchema,
+  issuedAt: z.string().datetime(),
+  expiresAt: z.string().datetime(),
+});
+
+export const capabilityDescriptorSchema = z.object({
+  action: nonEmptySchema,
+  resources: z.array(nonEmptySchema).max(64).default([]),
+  dataClasses: z.array(dataClassSchema).max(16).default([]),
+  destinations: z.array(nonEmptySchema).max(32).default([]),
+  sideEffects: z.array(nonEmptySchema).max(32).default([]),
+});
+
+export const agentCapabilityClaimSchema = z.object({
+  contractVersion: z.literal(contractVersion),
+  id: idSchema,
+  agentPassportId: idSchema,
+  version: z.number().int().positive(),
+  issuerId: idSchema,
+  capabilities: z.array(capabilityDescriptorSchema).min(1).max(128),
+  evidenceRefs: z.array(nonEmptySchema).min(1).max(128),
+  status: statusSchema,
+  issuedAt: z.string().datetime(),
+  expiresAt: z.string().datetime(),
+});
+
+export const semanticAuthorityGrantSchema = z.object({
+  contractVersion: z.literal(contractVersion),
+  id: idSchema,
+  agentPassportId: idSchema,
+  issuerPrincipalId: idSchema,
+  version: z.number().int().positive(),
+  purpose: nonEmptySchema,
+  allow: z.array(semanticRuleSchema).min(1).max(128),
+  deny: z.array(semanticRuleSchema).max(128).default([]),
+  permittedRoots: z.array(nonEmptySchema).max(64).default([]),
+  permittedSideEffects: z.array(nonEmptySchema).max(32).default([]),
+  maxTransactionUsd: z.number().nonnegative().optional(),
+  status: statusSchema,
+  issuedAt: z.string().datetime(),
+  expiresAt: z.string().datetime(),
+});
+
 export const agentIdentitySchema = z.object({
   contractVersion: z.literal(contractVersion),
   id: idSchema,
@@ -350,6 +438,41 @@ export const toolPassportCredentialSchema = z.object({
   }
 });
 
+export const toolSemanticContractSchema = z.object({
+  contractVersion: z.literal(contractVersion),
+  id: idSchema,
+  toolPassportId: idSchema,
+  artifactDigest: digestSchema,
+  version: z.number().int().positive(),
+  allowedActions: z.array(nonEmptySchema).min(1).max(64),
+  resources: z.array(nonEmptySchema).max(64).default([]),
+  dataClasses: z.array(dataClassSchema).max(16).default([]),
+  destinations: z.array(nonEmptySchema).max(32).default([]),
+  sideEffects: z.array(nonEmptySchema).max(32).default([]),
+  status: statusSchema,
+  issuedAt: z.string().datetime(),
+  expiresAt: z.string().datetime(),
+});
+
+export const assignmentGrantSchema = z.object({
+  contractVersion: z.literal(contractVersion),
+  id: idSchema,
+  organizationId: idSchema,
+  agentPassportId: idSchema,
+  capabilityClaimId: idSchema,
+  semanticAuthorityGrantId: idSchema,
+  toolPassportId: idSchema,
+  toolSemanticContractId: idSchema,
+  allowedActions: z.array(nonEmptySchema).min(1).max(64),
+  resourcePatterns: z.array(nonEmptySchema).min(1).max(64),
+  dataClasses: z.array(dataClassSchema).max(16),
+  destinations: z.array(nonEmptySchema).max(32),
+  sideEffects: z.array(nonEmptySchema).max(32),
+  status: statusSchema,
+  issuedAt: z.string().datetime(),
+  expiresAt: z.string().datetime(),
+});
+
 export const toolAssignmentSchema = z.object({
   contractVersion: z.literal(contractVersion),
   id: idSchema,
@@ -397,13 +520,21 @@ export const invocationEvidenceSchema = z.object({
 export type ArtifactManifest = z.infer<typeof artifactManifestSchema>;
 export type PublisherPassport = z.infer<typeof publisherPassportSchema>;
 export type ArtifactVersion = z.infer<typeof artifactVersionSchema>;
+export type OrganizationIdentity = z.infer<typeof organizationIdentitySchema>;
+export type ObservedAgent = z.infer<typeof observedAgentSchema>;
+export type AgentPassport = z.infer<typeof agentPassportSchema>;
+export type AgentCapabilityClaim = z.infer<typeof agentCapabilityClaimSchema>;
+export type SemanticAuthorityGrant = z.infer<typeof semanticAuthorityGrantSchema>;
 export type AssessmentReport = z.infer<typeof assessmentReportSchema>;
 export type AssessmentCheck = z.infer<typeof assessmentCheckSchema>;
 export type Finding = z.infer<typeof findingSchema>;
+export type PrincipalIdentity = z.infer<typeof principalIdentitySchema>;
 export type AgentIdentity = z.infer<typeof agentIdentitySchema>;
 export type ToolPassport = z.infer<typeof toolPassportSchema>;
 export type PublicVerificationKey = z.infer<typeof publicVerificationKeySchema>;
 export type ToolPassportCredential = z.infer<typeof toolPassportCredentialSchema>;
+export type ToolSemanticContract = z.infer<typeof toolSemanticContractSchema>;
+export type AssignmentGrant = z.infer<typeof assignmentGrantSchema>;
 export type ToolAssignment = z.infer<typeof toolAssignmentSchema>;
 export type GatewayDecision = z.infer<typeof gatewayDecisionSchema>;
 export type InvocationEvidence = z.infer<typeof invocationEvidenceSchema>;

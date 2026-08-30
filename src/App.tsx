@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import type {
   AssessmentReport,
+  AssignmentGrant,
   ArtifactManifest,
   Finding,
+  ObservedAgent,
   ToolPassportCredential,
 } from "./domain/contracts";
 import type { CommunityCredentialVerification } from "./credentials/communityIssuer";
 import { LocalTrustProvider } from "./providers/localTrustProvider";
 import type { SubmissionResult } from "./providers/trustProvider";
+import { seedDemoRegistry } from "./registry/demoRegistry";
 import { safeManifest, riskyManifest } from "./scanner/fixtures";
 
 type View = "overview" | "registry" | "assessments" | "gateway" | "evidence";
@@ -58,6 +61,9 @@ function App() {
   const [report, setReport] = useState<AssessmentReport>();
   const [credential, setCredential] = useState<ToolPassportCredential>();
   const [verification, setVerification] = useState<CommunityCredentialVerification>();
+  const [registryContext, setRegistryContext] = useState<ReturnType<typeof seedDemoRegistry>>();
+  const [identityState, setIdentityState] = useState<ObservedAgent["state"]>("observed");
+  const [assignment, setAssignment] = useState<AssignmentGrant>();
   const [scanning, setScanning] = useState(false);
   const [issuing, setIssuing] = useState(false);
   const [error, setError] = useState<string>();
@@ -69,6 +75,9 @@ function App() {
     setReport(undefined);
     setCredential(undefined);
     setVerification(undefined);
+    setRegistryContext(undefined);
+    setIdentityState("observed");
+    setAssignment(undefined);
     setError(undefined);
   }, [fixtureKey]);
 
@@ -77,9 +86,14 @@ function App() {
     setError(undefined);
     setCredential(undefined);
     setVerification(undefined);
+    setRegistryContext(undefined);
+    setIdentityState("observed");
+    setAssignment(undefined);
     try {
-      const nextSubmission = await provider.submitArtifact(manifest);
-      const nextReport = await provider.assessArtifact(nextSubmission.artifactVersion.id);
+      const nextProvider = new LocalTrustProvider();
+      const nextSubmission = await nextProvider.submitArtifact(manifest);
+      const nextReport = await nextProvider.assessArtifact(nextSubmission.artifactVersion.id);
+      setProvider(nextProvider);
       setSubmission(nextSubmission);
       setReport(nextReport);
     } catch (caught) {
@@ -101,8 +115,10 @@ function App() {
         manifest.tools[0].name,
       );
       const nextVerification = await provider.verifyToolPassport(nextCredential);
+      const nextRegistryContext = seedDemoRegistry(provider, nextCredential);
       setCredential(nextCredential);
       setVerification(nextVerification);
+      setRegistryContext(nextRegistryContext);
     } catch (caught) {
       setCredential(undefined);
       setVerification(undefined);
@@ -112,12 +128,37 @@ function App() {
     }
   };
 
+  const claimAndAssign = async () => {
+    if (!registryContext || !credential) return;
+    setError(undefined);
+    try {
+      let observation = provider.registry.transitionObservedAgent(registryContext.observedAgent.id, "correlated");
+      setIdentityState(observation.state);
+      observation = provider.registry.transitionObservedAgent(observation.id, "verified", registryContext.agentPassport.id);
+      setIdentityState(observation.state);
+      const nextAssignment = await provider.createAssignment({
+        agentPassportId: registryContext.agentPassport.id,
+        capabilityClaimId: registryContext.capabilityClaim.id,
+        authorityGrantId: registryContext.authorityGrant.id,
+        toolPassportId: credential.passport.id,
+        toolContractId: registryContext.toolContract.id,
+        request: registryContext.assignmentRequest,
+      });
+      observation = provider.registry.transitionObservedAgent(observation.id, "governed");
+      setAssignment(nextAssignment);
+      setIdentityState(observation.state);
+    } catch (caught) {
+      setAssignment(undefined);
+      setError(caught instanceof Error ? caught.message : "Identity claim and assignment failed.");
+    }
+  };
+
   const sortedFindings = useMemo(
     () => [...(report?.findings ?? [])].sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]),
     [report],
   );
   const snapshot = provider.snapshot();
-  const completedWorkflowSteps = credential ? 3 : report ? 2 : submission ? 1 : 0;
+  const completedWorkflowSteps = assignment ? 4 : credential ? 3 : report ? 2 : submission ? 1 : 0;
 
   return (
     <div className="app-shell">
@@ -355,6 +396,63 @@ function App() {
               </div>
               <a href="https://flint.network/command/app" target="_blank" rel="noreferrer">Open FLINT Command</a>
             </div>
+          </section>
+        )}
+
+        {credential && registryContext && (
+          <section className="panel registry-panel" aria-label="Identity and assignment registry">
+            <div className="registry-heading">
+              <div>
+                <p className="eyebrow">IDENTITY REGISTRY</p>
+                <h2>Resolve capability, authority, and exact-version assignment</h2>
+              </div>
+              <StatusPill tone={identityState === "governed" ? "pass" : "demo"}>{identityState.toUpperCase()}</StatusPill>
+            </div>
+
+            <div className="identity-lifecycle" aria-label="Observed Agent lifecycle">
+              {(["observed", "correlated", "verified", "governed"] as const).map((state, index) => {
+                const reached = ["observed", "correlated", "verified", "governed"].indexOf(identityState) >= index;
+                return (
+                  <div className={reached ? "identity-state reached" : "identity-state"} key={state}>
+                    <span>{String(index + 1).padStart(2, "0")}</span>
+                    <strong>{state}</strong>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="registry-intersection">
+              <article>
+                <span>CAN</span>
+                <strong>Capability Claim v{registryContext.capabilityClaim.version}</strong>
+                <p>{registryContext.capabilityClaim.capabilities[0].action} on approved catalog resources.</p>
+              </article>
+              <article>
+                <span>MAY</span>
+                <strong>Authority Grant v{registryContext.authorityGrant.version}</strong>
+                <p>{registryContext.authorityGrant.purpose}</p>
+              </article>
+              <article>
+                <span>TOOL</span>
+                <strong>Semantic Contract v{registryContext.toolContract.version}</strong>
+                <p>{credential.passport.artifactVersion} · {credential.passport.artifactDigest.slice(0, 27)}…</p>
+              </article>
+              <article>
+                <span>MAY NOW</span>
+                <strong>{assignment ? "Assignment active" : "No assignment"}</strong>
+                <p>{assignment ? `${assignment.allowedActions.join(", ")} · ${assignment.resourcePatterns.join(", ")}` : "The tool is not exposed until the intersection is approved."}</p>
+              </article>
+            </div>
+
+            <div className="coverage-disclosure">
+              <span>Observation confidence: {registryContext.observedAgent.confidence}%</span>
+              <span>Surfaces: {registryContext.observedAgent.instrumentedSurfaces.join(", ")}</span>
+              <span>Blind spot: {registryContext.observedAgent.blindSpots[0]}</span>
+            </div>
+
+            <button className="primary-button registry-action" type="button" disabled={Boolean(assignment)} onClick={() => void claimAndAssign()}>
+              {assignment ? "Agent governed · exact tool assigned" : "Claim agent & assign eligible tool"}
+            </button>
           </section>
         )}
 

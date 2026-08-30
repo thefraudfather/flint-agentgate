@@ -27,11 +27,15 @@
 | Malicious or compromised dependency | Exact-version and digest requirement, future provenance adapter, sandboxed analysis |
 | Toxic combination of untrusted input and sensitive authority | Cross-finding rule and runtime semantic gate |
 | Over-broad agent mandate | Structured allow and deny rules for action, resource, data class, destination, limits, and expiry |
+| Builder capability treated as delegated authority | Capability Claim and principal-issued Semantic Authority Grant are separate versioned records; assignment requires their intersection |
+| Assignment expands a wildcard, resource, destination, data class, or side effect | Directional subset checks reject expansion before the Assignment Grant is created |
+| Tool contract swapped across versions | Tool Semantic Contract must match the exact Tool Passport ID and artifact digest |
 | Stamp reuse after artifact change | Stamp and Tool Passport bind to the canonical artifact digest |
 | Forged PASS through missing scanner stages | Schema-enforced check ledger; incomplete coverage cannot validate as PASS |
 | Caller fabricates an eligible issuance decision | Issuance guard recomputes the decision from the assessment and review inputs |
 | Stale or precomputed approval reused | Assessment age limit and review-time ordering enforced by the issuance policy |
 | Revoked agent or tool remains callable | Status and expiry checked for every invocation, with default deny |
+| Unverified credential admitted to Registry | Registry admission requires independent integrity and currency verification; FLINT assurance additionally requires a FLINT trust result |
 | Forged community evidence | Ephemeral P-256 signatures detect post-issuance tampering; the embedded key is not a FLINT trust anchor and no production-signature claim is made |
 | Community credential presented as FLINT assurance | Separate assurance enum, no community `stampId`, explicit UI labeling, trademark policy, and verification result that keeps integrity separate from FLINT trust |
 | Locally embedded verification key mistaken for a trust anchor | Community verifier returns `flintVerified: false`; managed verification must pin FLINT-controlled keys independently |

@@ -36,9 +36,24 @@ The hackathon scanner starts with a bounded, read-only deterministic stage:
 2. Canonicalize the artifact and compute its digest.
 3. Inspect instructions, tool descriptions, schema openness, annotations, capabilities, data classes, and destinations.
 4. Apply stable risk IDs and toxic-combination logic.
-5. Emit the FLINT Assessment Contract with limitations.
+5. Record every required check with its version, status, and finding count.
+6. Emit the FLINT Assessment Contract with policy digest, coverage, limitations, and bounded failure state.
+
+Complete coverage with no findings can produce PASS. Missing checks produce degraded coverage and no better than CONDITIONAL. Validation or scanner failure produces ERROR and no artifact digest claim. Neither state can pass the Stamp gate.
 
 Later adapters can add source inventory, call graphs, threat modeling, Snyk analysis, sandboxed behavioral analysis, adversarial verification, and SARIF. Adapter output must map into FLINT risk IDs and evidence fields.
+
+## Stamp issuance gate
+
+The scanner does not issue a Stamp. The issuance boundary recomputes eligibility from the validated assessment and review inputs. It requires:
+
+- PASS with complete coverage and every required check passed
+- exact artifact ID, version, and digest
+- an allowed scanner and assessment-policy version
+- a fresh assessment in an allowed environment
+- an approved review that postdates the assessment and carries evidence references
+
+Demo assessments are denied by the default production issuance policy. The current prototype stops at an eligibility decision and does not claim to create a production cryptographic signature.
 
 ## Runtime authorization
 
@@ -56,4 +71,4 @@ Deny rules are evaluated before allow rules. Status, expiry, action, resource, d
 
 ## Initial deployment boundary
 
-The current build is browser-only and uses explicit demo fixtures. It does not issue cryptographic stamps, accept uploaded repositories, execute MCP servers, store production records, or change FLINT production infrastructure.
+The current build is browser-only and uses explicit demo fixtures. It does not issue cryptographic stamps, accept uploaded repositories, execute MCP servers, store production records, or change FLINT production infrastructure. A deployment configuration supplies a strict CSP and baseline browser security headers if this repository is later connected to Vercel.

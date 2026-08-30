@@ -106,16 +106,35 @@ export const findingSchema = z.object({
   remediation: z.string().max(1000),
 });
 
+export const assessmentCheckSchema = z.object({
+  id: idSchema,
+  version: z.string().min(1).max(80),
+  status: z.enum(["passed", "failed", "skipped"]),
+  findingCount: z.number().int().nonnegative(),
+  detail: z.string().max(500),
+});
+
 export const assessmentReportSchema = z.object({
   contractVersion: z.literal(contractVersion),
   id: idSchema,
-  artifactId: idSchema,
-  artifactVersion: z.string().min(1).max(80),
-  artifactDigest: digestSchema,
+  artifactId: idSchema.nullable(),
+  artifactVersion: z.string().min(1).max(80).nullable(),
+  artifactDigest: digestSchema.nullable(),
   scanner: z.object({
     id: idSchema,
     version: z.string().min(1).max(80),
     mode: z.literal("deterministic-static"),
+  }),
+  policy: z.object({
+    id: idSchema,
+    version: z.string().min(1).max(80),
+    digest: digestSchema,
+  }),
+  coverage: z.object({
+    status: z.enum(["complete", "degraded", "failed"]),
+    completedChecks: z.number().int().nonnegative(),
+    requiredChecks: z.number().int().positive(),
+    checks: z.array(assessmentCheckSchema).min(1).max(64),
   }),
   environment: environmentSchema,
   startedAt: z.string().datetime(),
@@ -124,6 +143,90 @@ export const assessmentReportSchema = z.object({
   score: z.number().int().min(0).max(100),
   findings: z.array(findingSchema).max(1000),
   limitations: z.array(z.string().max(500)).max(32),
+  failure: z.object({
+    code: idSchema,
+    message: z.string().min(1).max(500),
+  }).optional(),
+}).superRefine((report, context) => {
+  const allChecksPassed = report.coverage.checks.every((check) => check.status === "passed");
+  const anyCheckFailed = report.coverage.checks.some((check) => check.status === "failed");
+  const passedCheckCount = report.coverage.checks.filter((check) => check.status === "passed").length;
+
+  if (report.coverage.requiredChecks !== report.coverage.checks.length) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["coverage", "requiredChecks"],
+      message: "Required check count must match the check ledger.",
+    });
+  }
+
+  if (report.coverage.completedChecks !== passedCheckCount) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["coverage", "completedChecks"],
+      message: "Completed check count must match passed checks.",
+    });
+  }
+
+  if (
+    (report.coverage.status === "complete" && !allChecksPassed)
+    || (report.coverage.status === "degraded" && (allChecksPassed || anyCheckFailed))
+    || (report.coverage.status === "failed" && !anyCheckFailed)
+  ) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["coverage", "status"],
+      message: "Coverage status must match the check ledger.",
+    });
+  }
+
+  if (new Date(report.completedAt) < new Date(report.startedAt)) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["completedAt"],
+      message: "Assessment completion cannot predate its start.",
+    });
+  }
+
+  if (report.verdict === "PASS") {
+    if (report.coverage.status !== "complete" || !allChecksPassed) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["verdict"],
+        message: "PASS requires complete coverage and every required check to pass.",
+      });
+    }
+    if (!report.artifactId || !report.artifactVersion || !report.artifactDigest) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["artifactDigest"],
+        message: "PASS requires a complete exact-version artifact identity.",
+      });
+    }
+    if (report.failure) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["failure"],
+        message: "PASS cannot include a scanner failure.",
+      });
+    }
+  }
+
+  if (report.verdict === "ERROR" && !report.failure) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["failure"],
+      message: "ERROR requires a bounded failure record.",
+    });
+  }
+
+  if (report.coverage.status === "failed" && report.verdict !== "ERROR") {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["verdict"],
+      message: "Failed coverage requires an ERROR verdict.",
+    });
+  }
 });
 
 export const stampSchema = z.object({
@@ -136,6 +239,17 @@ export const stampSchema = z.object({
   expiresAt: z.string().datetime(),
   issuer: idSchema,
   signature: z.string().min(16),
+});
+
+export const stampIssuanceDecisionSchema = z.object({
+  contractVersion: z.literal(contractVersion),
+  id: idSchema,
+  assessmentId: idSchema,
+  artifactDigest: digestSchema.nullable(),
+  eligible: z.boolean(),
+  reasonCodes: z.array(idSchema).min(1).max(32),
+  evaluatedAt: z.string().datetime(),
+  policyDigest: digestSchema,
 });
 
 export const toolPassportSchema = z.object({
@@ -201,9 +315,11 @@ export const invocationEvidenceSchema = z.object({
 
 export type ArtifactManifest = z.infer<typeof artifactManifestSchema>;
 export type AssessmentReport = z.infer<typeof assessmentReportSchema>;
+export type AssessmentCheck = z.infer<typeof assessmentCheckSchema>;
 export type Finding = z.infer<typeof findingSchema>;
 export type AgentIdentity = z.infer<typeof agentIdentitySchema>;
 export type ToolPassport = z.infer<typeof toolPassportSchema>;
 export type ToolAssignment = z.infer<typeof toolAssignmentSchema>;
 export type GatewayDecision = z.infer<typeof gatewayDecisionSchema>;
 export type InvocationEvidence = z.infer<typeof invocationEvidenceSchema>;
+export type StampIssuanceDecision = z.infer<typeof stampIssuanceDecisionSchema>;

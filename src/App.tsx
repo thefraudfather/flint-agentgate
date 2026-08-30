@@ -30,7 +30,11 @@ function ScoreRing({ report }: { report?: AssessmentReport }) {
   const score = report?.score ?? 0;
   const tone = report?.verdict === "PASS" ? "pass" : report?.verdict === "FAIL" ? "fail" : "conditional";
   return (
-    <div className={`score-ring score-${tone}`} style={{ "--score": `${score * 3.6}deg` } as React.CSSProperties}>
+    <div className={`score-ring score-${tone}`}>
+      <svg viewBox="0 0 42 42" aria-hidden="true">
+        <circle className="score-track" cx="21" cy="21" r="15.9" pathLength="100" />
+        <circle className="score-meter" cx="21" cy="21" r="15.9" pathLength="100" strokeDasharray={`${score} ${100 - score}`} />
+      </svg>
       <div>
         <strong>{report ? score : "–"}</strong>
         <span>trust score</span>
@@ -201,18 +205,33 @@ function App() {
               <ScoreRing report={report} />
               <div>
                 <p className="eyebrow">FLINT ASSESSMENT CONTRACT V0</p>
-                <h2>{report?.verdict === "PASS" ? "Eligible for stamp review" : report?.verdict === "FAIL" ? "Stamp blocked" : "Controls required"}</h2>
+                <h2>{report?.verdict === "PASS" ? "Eligible for stamp review" : report?.verdict === "FAIL" ? "Stamp blocked" : report?.verdict === "ERROR" ? "Assessment failed closed" : "Controls required"}</h2>
                 <p>{report?.findings.length ?? 0} findings across declared instructions, schemas, annotations, and destinations.</p>
               </div>
             </div>
 
-            <div className="digest-row">
-              <span>Artifact digest</span>
-              <code>{report?.artifactDigest ?? "Awaiting assessment"}</code>
+            <div className="contract-meta">
+              <div className="digest-row">
+                <span>Artifact digest</span>
+                <code>{report?.artifactDigest ?? "Unavailable"}</code>
+              </div>
+              <div className="coverage-row">
+                <span>Coverage</span>
+                <strong>{report ? `${report.coverage.status.toUpperCase()} · ${report.coverage.completedChecks}/${report.coverage.requiredChecks}` : "Awaiting assessment"}</strong>
+              </div>
+              <div className="coverage-row">
+                <span>Policy</span>
+                <strong>{report ? `${report.policy.id} · ${report.policy.version}` : "Awaiting assessment"}</strong>
+              </div>
             </div>
 
             <div className="findings-list">
-              {sortedFindings.length === 0 ? (
+              {report?.failure ? (
+                <div className="empty-finding failed-closed">
+                  <span>!</span>
+                  <div><strong>{report.failure.code}</strong><p>{report.failure.message} This result cannot support a FLINT Stamp.</p></div>
+                </div>
+              ) : sortedFindings.length === 0 ? (
                 <div className="empty-finding">
                   <span>✓</span>
                   <div><strong>No deterministic risks detected</strong><p>Human review and deeper adapters remain required before a FLINT Stamp is issued.</p></div>

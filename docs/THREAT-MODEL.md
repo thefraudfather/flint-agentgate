@@ -28,6 +28,9 @@
 | Toxic combination of untrusted input and sensitive authority | Cross-finding rule and runtime semantic gate |
 | Over-broad agent mandate | Structured allow and deny rules for action, resource, data class, destination, limits, and expiry |
 | Stamp reuse after artifact change | Stamp and Tool Passport bind to the canonical artifact digest |
+| Forged PASS through missing scanner stages | Schema-enforced check ledger; incomplete coverage cannot validate as PASS |
+| Caller fabricates an eligible issuance decision | Issuance guard recomputes the decision from the assessment and review inputs |
+| Stale or precomputed approval reused | Assessment age limit and review-time ordering enforced by the issuance policy |
 | Revoked agent or tool remains callable | Status and expiry checked for every invocation, with default deny |
 | Forged evidence | Planned asymmetric signatures and key rotation; no production-signature claim in this prototype |
 | Scanner compromise | Scanner is a governed workload identity, read-only by default, with bounded resources and no production secrets |

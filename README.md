@@ -14,6 +14,7 @@ This repository is the cloneable **AgentGate Community** reference implementatio
 
 - Versioned contracts for principals, agent identities, semantic authority, tool submissions, assessments, FLINT Stamps, Tool Passports, assignments, gateway decisions, and invocation evidence.
 - A bounded deterministic scanner for manifest, schema, annotation, instruction, destination, and toxic-combination risks.
+- An editable builder intake with publisher, source, artifact, exact version, tool identity, capability, destination, data-class, behavior, JSON Schema, and instruction fields.
 - A fail-closed assessment ledger with explicit scanner version, policy version and digest, required-check coverage, bounded errors, and blind spots.
 - A hard Stamp issuance gate requiring a fresh complete production PASS and an approved evidence-bearing review.
 - A credential-free Community Scanner behind a stable scanner-adapter interface.
@@ -36,7 +37,7 @@ This repository is the cloneable **AgentGate Community** reference implementatio
 
 The constellation visualizes records supplied to the local clone. Its static green and red nodes are explicitly simulated examples; Community does not issue FLINT passports or claim autonomous network discovery or FLINT verification. Managed Command adds verified discovery, fingerprint correlation, continuous monitoring, historical analysis, and response controls.
 
-The scanner never executes a submitted tool. A PASS is eligibility for additional stamp review, not proof that an artifact is vulnerability-free.
+The builder intake hashes and evaluates the submitted manifest fields. The source URL is provenance metadata in this prototype; Community does not fetch, clone, install, or execute the linked artifact. A PASS is eligibility for additional stamp review, not proof that an artifact is vulnerability-free.
 
 ## Run locally
 
@@ -57,7 +58,7 @@ The local development server binds to `127.0.0.1:4173`.
 
 The default demo flow is:
 
-1. Open **Tool Assessments** and select the safe or malicious fixture.
+1. Open **Tool Assessments** and load a safe or risky example, or edit the manifest fields into a custom submission.
 2. Submit and assess its exact version.
 3. Issue a community Tool Passport only for the passing fixture; the UI advances to **Identity Registry**.
 4. Verify the local signature and inspect the explicit assurance level.

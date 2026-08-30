@@ -9,6 +9,7 @@ import type {
   ObservedAgent,
   ToolPassportCredential,
 } from "./domain/contracts";
+import { artifactManifestSchema } from "./domain/contracts";
 import type { CommunityCredentialVerification } from "./credentials/communityIssuer";
 import { LocalTrustProvider } from "./providers/localTrustProvider";
 import type { SubmissionResult } from "./providers/trustProvider";
@@ -20,9 +21,12 @@ import {
 } from "./webmcp/conditionalGateway";
 import type { GatewayInvocationRequest } from "./gateway/runtimeGateway";
 import { CommunityFleetConstellation } from "./components/CommunityFleetConstellation";
+import {
+  AssessmentIntakeForm,
+  type AssessmentPreset,
+} from "./components/AssessmentIntakeForm";
 
 type View = "overview" | "registry" | "assessments" | "gateway" | "evidence";
-type FixtureKey = "safe" | "risky";
 
 const navItems: Array<{ id: View; label: string; glyph: string }> = [
   { id: "overview", label: "Overview", glyph: "01" },
@@ -97,7 +101,11 @@ function ScoreRing({ report }: { report?: AssessmentReport }) {
 
 function App() {
   const [view, setView] = useState<View>("overview");
-  const [fixtureKey, setFixtureKey] = useState<FixtureKey>("safe");
+  const [fixtureKey, setFixtureKey] = useState<AssessmentPreset>("safe");
+  const [manifest, setManifest] = useState<ArtifactManifest>(() => structuredClone(safeManifest));
+  const [schemaDraft, setSchemaDraft] = useState(() => JSON.stringify(safeManifest.tools[0].inputSchema, null, 2));
+  const [schemaError, setSchemaError] = useState<string>();
+  const [intakeError, setIntakeError] = useState<string>();
   const [provider, setProvider] = useState(() => new LocalTrustProvider());
   const [submission, setSubmission] = useState<SubmissionResult>();
   const [report, setReport] = useState<AssessmentReport>();
@@ -115,14 +123,13 @@ function App() {
   const [scanning, setScanning] = useState(false);
   const [issuing, setIssuing] = useState(false);
   const [error, setError] = useState<string>();
-  const manifest: ArtifactManifest = fixtureKey === "safe" ? safeManifest : riskyManifest;
 
   const openView = (nextView: View) => {
     setView(nextView);
     window.requestAnimationFrame(() => window.scrollTo({ left: 0, top: 0 }));
   };
 
-  const resetDemo = (nextView: View = "overview") => {
+  const clearWorkflowState = () => {
     setProvider(new LocalTrustProvider());
     setSubmission(undefined);
     setReport(undefined);
@@ -140,16 +147,74 @@ function App() {
     setInvoking(false);
     setInvocationSequence(0);
     setError(undefined);
+  };
+
+  const resetDemo = (nextView: View = "overview") => {
+    clearWorkflowState();
+    setIntakeError(undefined);
     openView(nextView);
   };
 
-  const selectFixture = (nextFixture: FixtureKey) => {
+  const selectFixture = (nextFixture: Exclude<AssessmentPreset, "custom">) => {
     if (nextFixture === fixtureKey) return;
+    const nextManifest = structuredClone(nextFixture === "safe" ? safeManifest : riskyManifest);
     setFixtureKey(nextFixture);
-    resetDemo("assessments");
+    setManifest(nextManifest);
+    setSchemaDraft(JSON.stringify(nextManifest.tools[0].inputSchema, null, 2));
+    setSchemaError(undefined);
+    setIntakeError(undefined);
+    clearWorkflowState();
+    openView("assessments");
+  };
+
+  const changeManifest = (nextManifest: ArtifactManifest) => {
+    setManifest(nextManifest);
+    setFixtureKey("custom");
+    setIntakeError(undefined);
+    clearWorkflowState();
+  };
+
+  const changeSchemaDraft = (value: string) => {
+    setSchemaDraft(value);
+    setFixtureKey("custom");
+    setIntakeError(undefined);
+    clearWorkflowState();
+    try {
+      const inputSchema = JSON.parse(value) as ArtifactManifest["tools"][number]["inputSchema"];
+      setManifest((current) => ({
+        ...current,
+        tools: [{ ...current.tools[0], inputSchema }, ...current.tools.slice(1)],
+      }));
+      setSchemaError(undefined);
+    } catch {
+      setSchemaError("Enter a valid JSON object before running the assessment.");
+    }
   };
 
   const runAssessment = async () => {
+    let inputSchema: unknown;
+    try {
+      inputSchema = JSON.parse(schemaDraft);
+      setSchemaError(undefined);
+    } catch {
+      setSchemaError("Enter a valid JSON object before running the assessment.");
+      setIntakeError("The input schema is not valid JSON.");
+      return;
+    }
+
+    const candidate = {
+      ...manifest,
+      tools: [{ ...manifest.tools[0], inputSchema }, ...manifest.tools.slice(1)],
+    };
+    const validated = artifactManifestSchema.safeParse(candidate);
+    if (!validated.success) {
+      const issue = validated.error.issues[0];
+      setIntakeError(`${issue.path.join(".") || "manifest"}: ${issue.message}`);
+      return;
+    }
+
+    setManifest(validated.data);
+    setIntakeError(undefined);
     setScanning(true);
     setError(undefined);
     setCredential(undefined);
@@ -163,7 +228,7 @@ function App() {
     setInvocationEvidence(undefined);
     try {
       const nextProvider = new LocalTrustProvider();
-      const nextSubmission = await nextProvider.submitArtifact(manifest);
+      const nextSubmission = await nextProvider.submitArtifact(validated.data);
       const nextReport = await nextProvider.assessArtifact(nextSubmission.artifactVersion.id);
       setProvider(nextProvider);
       setSubmission(nextSubmission);
@@ -463,39 +528,21 @@ function App() {
               <StatusPill tone={report?.verdict?.toLowerCase() ?? "neutral"}>{scanning ? "ASSESSING" : report?.verdict ?? "READY"}</StatusPill>
             </div>
 
-            <div className="fixture-switch" role="group" aria-label="Demo artifact">
-              <button type="button" className={fixtureKey === "safe" ? "selected" : ""} onClick={() => selectFixture("safe")}>Catalog lookup</button>
-              <button type="button" className={fixtureKey === "risky" ? "selected" : ""} onClick={() => selectFixture("risky")}>Autonomous operator</button>
-            </div>
+            <AssessmentIntakeForm
+              manifest={manifest}
+              preset={fixtureKey}
+              schemaDraft={schemaDraft}
+              schemaError={schemaError}
+              disabled={scanning || issuing}
+              onPresetChange={selectFixture}
+              onManifestChange={changeManifest}
+              onSchemaDraftChange={changeSchemaDraft}
+            />
 
-            <div className="artifact-summary">
-              <div>
-                <span>Publisher</span>
-                <strong>{manifest.publisher.displayName}</strong>
-              </div>
-              <div>
-                <span>Artifact</span>
-                <strong>{manifest.artifact.name}</strong>
-              </div>
-              <div>
-                <span>Version</span>
-                <strong>{manifest.artifact.version}</strong>
-              </div>
-              <div>
-                <span>Declared tools</span>
-                <strong>{manifest.tools.length}</strong>
-              </div>
-            </div>
-
-            <div className="manifest-preview">
-              <div className="manifest-topline">
-                <span>{manifest.tools[0].name}</span>
-                <span>{manifest.tools[0].annotations.readOnly ? "READ ONLY" : "MUTATING"}</span>
-              </div>
-              <p>{manifest.tools[0].description}</p>
-              <div className="tag-row">
-                {manifest.tools[0].capabilities.map((capability) => <span key={capability}>{capability}</span>)}
-              </div>
+            <div className="assessment-engine-strip" aria-label="Assessment execution boundary">
+              <span><b>ENGINE</b> Community Scanner</span>
+              <span><b>MODE</b> Deterministic static</span>
+              <span><b>EXECUTION</b> Submitted tools never run</span>
             </div>
 
             {submission && (
@@ -506,6 +553,7 @@ function App() {
               </div>
             )}
 
+            {intakeError && <p className="error-message" role="alert">{intakeError}</p>}
             {error && <p className="error-message" role="alert">{error}</p>}
             <button className="primary-button" type="button" disabled={scanning || issuing} onClick={() => void runAssessment()}>
               {scanning ? "Submitting and assessing…" : report ? "Re-submit exact version" : "Submit exact version & assess"}
@@ -796,7 +844,7 @@ function App() {
           <ViewEmptyState
             eyebrow="EVIDENCE LOG / NO EVENTS"
             title="No signed invocation evidence has been emitted"
-            body={assignment ? "Invoke the eligible tool—or attempt semantic drift—to create a signed gateway decision record." : "Complete the tool assessment, identity assignment, and gateway invocation to create the first signed record."}
+            body={assignment ? "Invoke the eligible tool or attempt semantic drift to create a signed gateway decision record." : "Complete the tool assessment, identity assignment, and gateway invocation to create the first signed record."}
             actionLabel={assignment ? "Open gateway policy" : credential ? "Open identity registry" : "Open tool assessments"}
             onAction={() => openView(assignment ? "gateway" : credential ? "registry" : "assessments")}
           />

@@ -13,7 +13,7 @@ This script matches the Community build. It does not claim a FLINT Stamp, produc
 
 ## 0:25–1:05 — Assess the exact tool version
 
-1. Open **Tool Assessments**, then select **Submit exact version & assess**.
+1. Open **Tool Assessments**. Show the editable publisher, artifact, tool, scope, behavior, JSON Schema, and instruction fields, then select **Submit exact version & assess**.
 2. Show the immutable artifact version and SHA-256 digest.
 3. Show complete scanner coverage, stable risk identifiers, and the bounded Community Scanner adapter.
 4. Select **Issue community Tool Passport**; the interface advances to **Identity Registry**.

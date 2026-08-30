@@ -21,6 +21,8 @@ The Community Fleet Constellation is a presentation adapter over records already
 
 The Community UI separates the trust loop into five functional views: Overview, Tool Assessments, Identity Registry, Gateway Policy, and Evidence Log. Each view remains inspectable before its workflow prerequisite exists and renders an explicit next-action state rather than an inert navigation shell. Successful credential issuance advances to Identity Registry; successful assignment advances to Gateway Policy; signed invocation records remain available through Evidence Log.
 
+Tool Assessments uses one editable `ArtifactManifest` throughout the trust loop. Builder fields cover publisher and artifact provenance, exact version, tool identity, declared capabilities and destinations, data classes, behavior annotations, JSON input schema, and instructions. Safe and risky examples populate those same fields rather than entering through a separate code path. Any edit clears stale assessment, credential, assignment, gateway, and evidence state before a new immutable version can be created. The source URL is stored as provenance only; this prototype does not fetch or execute it.
+
 ```text
 Community UI
   -> TrustProvider

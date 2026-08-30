@@ -32,7 +32,9 @@
 | Caller fabricates an eligible issuance decision | Issuance guard recomputes the decision from the assessment and review inputs |
 | Stale or precomputed approval reused | Assessment age limit and review-time ordering enforced by the issuance policy |
 | Revoked agent or tool remains callable | Status and expiry checked for every invocation, with default deny |
-| Forged evidence | Planned asymmetric signatures and key rotation; no production-signature claim in this prototype |
+| Forged community evidence | Ephemeral P-256 signatures detect post-issuance tampering; the embedded key is not a FLINT trust anchor and no production-signature claim is made |
+| Community credential presented as FLINT assurance | Separate assurance enum, no community `stampId`, explicit UI labeling, trademark policy, and verification result that keeps integrity separate from FLINT trust |
+| Locally embedded verification key mistaken for a trust anchor | Community verifier returns `flintVerified: false`; managed verification must pin FLINT-controlled keys independently |
 | Scanner compromise | Scanner is a governed workload identity, read-only by default, with bounded resources and no production secrets |
 | False assurance from partial discovery | Coverage shown as observed telemetry, never as complete inventory |
 
@@ -40,6 +42,6 @@
 
 - Running arbitrary submitted code
 - Autonomous remediation
-- Production identity or key management
+- Production identity or key management; community keys are ephemeral demo keys
 - Public upload endpoints
 - A claim of complete agent discovery or complete vulnerability detection

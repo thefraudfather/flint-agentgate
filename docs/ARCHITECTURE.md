@@ -12,6 +12,20 @@ The architecture has five parts:
 4. Gateway: conditional tool exposure plus runtime authorization before invocation.
 5. Command: observed inventory, posture, decisions, invocation evidence, freeze, and revocation.
 
+The Community build adds two replaceable boundaries:
+
+- `ScannerAdapter`: normalizes any scanner into the stable FLINT Assessment Contract. The bundled Community Scanner is credential-free, read-only, and never executes submitted code.
+- `TrustProvider`: owns submission, assessment, issuance, and verification. The bundled Local Trust Provider is fully usable offline after installation. A future FLINT Command provider can implement the same public interface using managed services.
+
+```text
+Community UI
+  -> TrustProvider
+      -> Publisher intake and immutable artifact version
+      -> ScannerAdapter
+      -> Assessment Contract
+      -> Tool Passport issuer and verifier
+```
+
 ## Stable objects
 
 All durable objects declare `contractVersion: agentgate.v0` and are validated at runtime.
@@ -19,9 +33,12 @@ All durable objects declare `contractVersion: agentgate.v0` and are validated at
 - `PrincipalIdentity`
 - `AgentIdentity` with `SemanticAuthority`
 - `ArtifactManifest`
+- `PublisherPassport`
+- `ArtifactVersion`
 - `AssessmentReport`
 - `Stamp`
 - `ToolPassport`
+- `ToolPassportCredential`
 - `ToolAssignment`
 - `GatewayDecision`
 - `InvocationEvidence`
@@ -55,6 +72,10 @@ The scanner does not issue a Stamp. The issuance boundary recomputes eligibility
 
 Demo assessments are denied by the default production issuance policy. The current prototype stops at an eligibility decision and does not claim to create a production cryptographic signature.
 
+The Local Trust Provider may issue a separate community Tool Passport after a complete demo PASS. It generates an ephemeral ECDSA P-256 key, signs the Tool Passport payload, and embeds the public JWK for local integrity verification. The credential is always marked `community-self-attested`, has no `stampId`, and verifies as `flintVerified: false`.
+
+Signature validity proves only that the payload was not changed after issuance by that local key. It does not establish that FLINT reviewed the artifact, controls the issuer, or endorses the credential. FLINT-verified credentials require a FLINT trust anchor and Stamp issued by Command.
+
 ## Runtime authorization
 
 An invocation is allowed only when all four inputs intersect:
@@ -71,4 +92,4 @@ Deny rules are evaluated before allow rules. Status, expiry, action, resource, d
 
 ## Initial deployment boundary
 
-The current build is browser-only and uses explicit demo fixtures. It does not issue cryptographic stamps, accept uploaded repositories, execute MCP servers, store production records, or change FLINT production infrastructure. A deployment configuration supplies a strict CSP and baseline browser security headers if this repository is later connected to Vercel.
+The current build is browser-only and uses explicit demo fixtures. It issues ephemeral self-attested community credentials, not FLINT cryptographic Stamps. It does not accept uploaded repositories, execute MCP servers, store production records, or change FLINT production infrastructure. A deployment configuration supplies a strict CSP and baseline browser security headers if this repository is later connected to Vercel.

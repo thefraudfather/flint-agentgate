@@ -4,12 +4,23 @@ FLINT AgentGate is an enterprise trust gateway for AI agents and MCP tools. It c
 
 This repository is an isolated hackathon prototype. It does not modify or deploy the production FLINT MVP.
 
+## Community and Command
+
+This repository is the cloneable **AgentGate Community** reference implementation. It works without a FLINT account or third-party scanner credential. Community credentials are locally signed and explicitly marked `community-self-attested`; they are not a FLINT Stamp and do not represent FLINT verification.
+
+**FLINT Command** is the managed assurance layer for FLINT-controlled identity and Stamp issuance, continuous discovery and reassessment, proprietary detection, revocation, monitoring, enterprise controls, and network intelligence. The public provider and scanner interfaces keep the Community integration compatible with those managed services without making them necessary for the local flow.
+
 ## What is implemented
 
 - Versioned contracts for principals, agent identities, semantic authority, tool submissions, assessments, FLINT Stamps, Tool Passports, assignments, gateway decisions, and invocation evidence.
 - A bounded deterministic scanner for manifest, schema, annotation, instruction, destination, and toxic-combination risks.
 - A fail-closed assessment ledger with explicit scanner version, policy version and digest, required-check coverage, bounded errors, and blind spots.
 - A hard Stamp issuance gate requiring a fresh complete production PASS and an approved evidence-bearing review.
+- A credential-free Community Scanner behind a stable scanner-adapter interface.
+- Immutable publisher intake records and exact-version artifact bindings.
+- Locally generated P-256 signing keys, signed community Tool Passports, and integrity verification.
+- An assurance boundary that prevents community credentials from claiming a FLINT Stamp.
+- A Local Trust Provider that can later be replaced by a managed Command provider without changing public contracts.
 - A gateway evaluator that requires the intersection of agent authority, active Tool Passport, active assignment, and request context.
 - A responsive Command-style interface with two clearly labeled demo artifacts.
 - Tests for the stable contracts, safe and risky assessments, and semantic authorization boundaries.
@@ -27,9 +38,20 @@ npm run dev
 
 The local development server binds to `127.0.0.1:4173`.
 
+The default demo flow is:
+
+1. Select the safe or malicious fixture.
+2. Submit and assess its exact version.
+3. Issue a community Tool Passport only for the passing fixture.
+4. Verify the local signature and inspect the explicit assurance level.
+
+All demo state and signing keys are ephemeral to the browser session.
+
 ## Architecture
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/ASSESSMENT-CONTRACT.md](docs/ASSESSMENT-CONTRACT.md), and [docs/THREAT-MODEL.md](docs/THREAT-MODEL.md).
+
+Security reports should follow [SECURITY.md](SECURITY.md). Contributions should follow [CONTRIBUTING.md](CONTRIBUTING.md). FLINT names and verification marks are governed separately from the source license; see [TRADEMARKS.md](TRADEMARKS.md).
 
 ## Source-informed boundaries
 
@@ -40,6 +62,8 @@ The initial scanner architecture borrows proven ideas without binding FLINT's pu
 - [WebMCP demo](https://www.youtube.com/watch?v=EoNH3Tn8wYE): browser-session tools, conditional exposure, and bring-your-own-agent journeys.
 
 Future scanners integrate through adapters into the stable FLINT Assessment Contract. Snyk integration remains optional and requires an approved `SNYK_TOKEN` secret.
+
+No Snyk or Visa source is vendored in this repository. Their projects informed the adapter and evidence architecture; future integrations must preserve applicable licenses, notices, and service terms.
 
 ## License
 

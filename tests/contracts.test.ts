@@ -49,6 +49,8 @@ const agent: AgentIdentity = agentIdentitySchema.parse({
 const passport: ToolPassport = toolPassportSchema.parse({
   contractVersion,
   id: "tool-passport:catalog-lookup:1.4.2",
+  assuranceLevel: "flint-verified",
+  issuerId: "flint:command",
   toolName: "catalog.lookup",
   artifactId: safeManifest.artifact.id,
   artifactVersion: safeManifest.artifact.version,

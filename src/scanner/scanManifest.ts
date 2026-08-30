@@ -19,7 +19,7 @@ import { riskCatalog, severityWeight } from "./riskCatalog";
 export const scannerId = "flint.agentgate.static";
 export const scannerVersion = "0.2.0";
 
-type ScanOptions = {
+export type ScanOptions = {
   now?: string;
   disabledChecks?: AssessmentCheckId[];
 };

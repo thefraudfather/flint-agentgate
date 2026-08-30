@@ -4,6 +4,7 @@ export const contractVersion = "agentgate.v0" as const;
 
 export const environmentSchema = z.enum(["demo", "test", "production"]);
 export const statusSchema = z.enum(["active", "frozen", "revoked"]);
+export const assuranceLevelSchema = z.enum(["community-self-attested", "flint-verified"]);
 export const dataClassSchema = z.enum([
   "public",
   "internal",
@@ -94,6 +95,30 @@ export const artifactManifestSchema = z.object({
   }),
   tools: z.array(toolDefinitionSchema).min(1).max(128),
   instructions: z.string().max(100_000).default(""),
+});
+
+export const publisherPassportSchema = z.object({
+  contractVersion: z.literal(contractVersion),
+  id: idSchema,
+  publisherId: idSchema,
+  organizationId: idSchema,
+  displayName: nonEmptySchema,
+  assuranceLevel: z.literal("community-self-attested"),
+  issuerId: idSchema,
+  status: statusSchema,
+  issuedAt: z.string().datetime(),
+  expiresAt: z.string().datetime(),
+});
+
+export const artifactVersionSchema = z.object({
+  contractVersion: z.literal(contractVersion),
+  id: idSchema,
+  artifactId: idSchema,
+  version: z.string().trim().min(1).max(80),
+  digest: digestSchema,
+  publisherPassportId: idSchema,
+  submittedAt: z.string().datetime(),
+  manifest: artifactManifestSchema,
 });
 
 export const findingSchema = z.object({
@@ -255,18 +280,74 @@ export const stampIssuanceDecisionSchema = z.object({
 export const toolPassportSchema = z.object({
   contractVersion: z.literal(contractVersion),
   id: idSchema,
+  assuranceLevel: assuranceLevelSchema,
+  issuerId: idSchema,
   toolName: idSchema,
   artifactId: idSchema,
   artifactVersion: z.string().min(1).max(80),
   artifactDigest: digestSchema,
   assessmentId: idSchema,
-  stampId: idSchema,
+  stampId: idSchema.optional(),
   capabilities: z.array(nonEmptySchema).min(1).max(32),
   dataClasses: z.array(dataClassSchema).max(16),
   destinations: z.array(nonEmptySchema).max(32),
   issuedAt: z.string().datetime(),
   expiresAt: z.string().datetime(),
   status: statusSchema,
+}).superRefine((passport, context) => {
+  if (passport.assuranceLevel === "community-self-attested" && passport.stampId) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["stampId"],
+      message: "A community Tool Passport cannot claim a FLINT Stamp.",
+    });
+  }
+
+  if (passport.assuranceLevel === "flint-verified" && !passport.stampId) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["stampId"],
+      message: "A FLINT-verified Tool Passport requires a FLINT Stamp.",
+    });
+  }
+});
+
+export const publicVerificationKeySchema = z.object({
+  kty: z.literal("EC"),
+  crv: z.literal("P-256"),
+  x: z.string().min(1),
+  y: z.string().min(1),
+  ext: z.boolean().optional(),
+  key_ops: z.array(z.string()).optional(),
+});
+
+export const toolPassportCredentialSchema = z.object({
+  contractVersion: z.literal(contractVersion),
+  credentialType: z.literal("ToolPassportCredential"),
+  passport: toolPassportSchema,
+  proof: z.object({
+    type: z.literal("DataIntegrityProof"),
+    cryptosuite: z.literal("ecdsa-p256-sha256"),
+    createdAt: z.string().datetime(),
+    verificationMethod: z.string().min(5).max(240).regex(/^[a-zA-Z0-9_.:#-]+$/),
+    publicKeyJwk: publicVerificationKeySchema,
+    proofValue: z.string().regex(/^[A-Za-z0-9_-]+$/).min(16),
+  }),
+}).superRefine((credential, context) => {
+  if (!credential.proof.verificationMethod.startsWith(`${credential.passport.issuerId}#`)) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["proof", "verificationMethod"],
+      message: "Proof verification method must be controlled by the passport issuer.",
+    });
+  }
+  if (credential.proof.createdAt !== credential.passport.issuedAt) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["proof", "createdAt"],
+      message: "Proof creation time must match Tool Passport issuance time.",
+    });
+  }
 });
 
 export const toolAssignmentSchema = z.object({
@@ -314,11 +395,15 @@ export const invocationEvidenceSchema = z.object({
 });
 
 export type ArtifactManifest = z.infer<typeof artifactManifestSchema>;
+export type PublisherPassport = z.infer<typeof publisherPassportSchema>;
+export type ArtifactVersion = z.infer<typeof artifactVersionSchema>;
 export type AssessmentReport = z.infer<typeof assessmentReportSchema>;
 export type AssessmentCheck = z.infer<typeof assessmentCheckSchema>;
 export type Finding = z.infer<typeof findingSchema>;
 export type AgentIdentity = z.infer<typeof agentIdentitySchema>;
 export type ToolPassport = z.infer<typeof toolPassportSchema>;
+export type PublicVerificationKey = z.infer<typeof publicVerificationKeySchema>;
+export type ToolPassportCredential = z.infer<typeof toolPassportCredentialSchema>;
 export type ToolAssignment = z.infer<typeof toolAssignmentSchema>;
 export type GatewayDecision = z.infer<typeof gatewayDecisionSchema>;
 export type InvocationEvidence = z.infer<typeof invocationEvidenceSchema>;

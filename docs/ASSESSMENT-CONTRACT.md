@@ -41,3 +41,16 @@ The schema rejects PASS when coverage is not complete, a check did not pass, the
 PASS is necessary but insufficient. The independent issuance policy also checks environment, report age, scanner version, assessment-policy version, exact artifact identity, review status, review ordering, reviewer identity, and evidence references.
 
 The current prototype emits an eligibility decision only. A future server-side issuer must sign the resulting Stamp with FLINT-managed asymmetric keys after this gate succeeds.
+
+## Community Tool Passport
+
+AgentGate Community has a separate issuance path for the cloneable demonstration. It requires a complete PASS whose artifact ID, version, and digest exactly match the immutable submitted version. It then issues a signed `ToolPassportCredential` with:
+
+- `assuranceLevel: community-self-attested`
+- the local issuer ID and ephemeral public verification key
+- the exact artifact version and digest
+- the assessment ID and declared tool contract
+- an ECDSA P-256 data-integrity proof
+- no `stampId`
+
+The verifier reports integrity, currency, and assurance separately. It always reports `flintVerified: false` for a community credential. A community credential containing a `stampId` is schema-invalid.

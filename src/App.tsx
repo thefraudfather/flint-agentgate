@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import type { AssessmentReport, ArtifactManifest, Finding } from "./domain/contracts";
+import type {
+  AssessmentReport,
+  ArtifactManifest,
+  Finding,
+  ToolPassportCredential,
+} from "./domain/contracts";
+import type { CommunityCredentialVerification } from "./credentials/communityIssuer";
+import { LocalTrustProvider } from "./providers/localTrustProvider";
+import type { SubmissionResult } from "./providers/trustProvider";
 import { safeManifest, riskyManifest } from "./scanner/fixtures";
-import { scanManifest } from "./scanner/scanManifest";
 
 type View = "overview" | "registry" | "assessments" | "gateway" | "evidence";
 type FixtureKey = "safe" | "risky";
@@ -46,17 +53,37 @@ function ScoreRing({ report }: { report?: AssessmentReport }) {
 function App() {
   const [view, setView] = useState<View>("overview");
   const [fixtureKey, setFixtureKey] = useState<FixtureKey>("safe");
+  const [provider, setProvider] = useState(() => new LocalTrustProvider());
+  const [submission, setSubmission] = useState<SubmissionResult>();
   const [report, setReport] = useState<AssessmentReport>();
+  const [credential, setCredential] = useState<ToolPassportCredential>();
+  const [verification, setVerification] = useState<CommunityCredentialVerification>();
   const [scanning, setScanning] = useState(false);
+  const [issuing, setIssuing] = useState(false);
   const [error, setError] = useState<string>();
   const manifest: ArtifactManifest = fixtureKey === "safe" ? safeManifest : riskyManifest;
 
-  const runScan = async (target = manifest) => {
+  useEffect(() => {
+    setProvider(new LocalTrustProvider());
+    setSubmission(undefined);
+    setReport(undefined);
+    setCredential(undefined);
+    setVerification(undefined);
+    setError(undefined);
+  }, [fixtureKey]);
+
+  const runAssessment = async () => {
     setScanning(true);
     setError(undefined);
+    setCredential(undefined);
+    setVerification(undefined);
     try {
-      setReport(await scanManifest(target));
+      const nextSubmission = await provider.submitArtifact(manifest);
+      const nextReport = await provider.assessArtifact(nextSubmission.artifactVersion.id);
+      setSubmission(nextSubmission);
+      setReport(nextReport);
     } catch (caught) {
+      setSubmission(undefined);
       setReport(undefined);
       setError(caught instanceof Error ? caught.message : "Assessment failed.");
     } finally {
@@ -64,16 +91,33 @@ function App() {
     }
   };
 
-  useEffect(() => {
-    void runScan(manifest);
-    // The fixture change is the intended assessment trigger.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fixtureKey]);
+  const issuePassport = async () => {
+    if (!submission || !report) return;
+    setIssuing(true);
+    setError(undefined);
+    try {
+      const nextCredential = await provider.issueToolPassport(
+        submission.artifactVersion.id,
+        manifest.tools[0].name,
+      );
+      const nextVerification = await provider.verifyToolPassport(nextCredential);
+      setCredential(nextCredential);
+      setVerification(nextVerification);
+    } catch (caught) {
+      setCredential(undefined);
+      setVerification(undefined);
+      setError(caught instanceof Error ? caught.message : "Tool Passport issuance failed.");
+    } finally {
+      setIssuing(false);
+    }
+  };
 
   const sortedFindings = useMemo(
     () => [...(report?.findings ?? [])].sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]),
     [report],
   );
+  const snapshot = provider.snapshot();
+  const completedWorkflowSteps = credential ? 3 : report ? 2 : submission ? 1 : 0;
 
   return (
     <div className="app-shell">
@@ -82,7 +126,7 @@ function App() {
           <span className="brand-mark" aria-hidden="true">F</span>
           <div>
             <strong>FLINT</strong>
-            <span>AgentGate</span>
+            <span>AgentGate Community</span>
           </div>
         </div>
 
@@ -103,8 +147,8 @@ function App() {
         <div className="system-state">
           <span className="live-dot" />
           <div>
-            <strong>Policy plane online</strong>
-            <span>Demo environment</span>
+            <strong>Local provider ready</strong>
+            <span>No FLINT credential required</span>
           </div>
         </div>
       </aside>
@@ -112,8 +156,8 @@ function App() {
       <main>
         <header className="topbar">
           <div>
-            <p className="eyebrow">ENTERPRISE CONTROL PLANE / {view.toUpperCase()}</p>
-            <h1>{view === "assessments" ? "Tool assessment" : "Agent security posture"}</h1>
+            <p className="eyebrow">COMMUNITY TRUST PLANE / {view.toUpperCase()}</p>
+            <h1>{view === "assessments" ? "Tool assessment" : "From submitted tool to governed capability"}</h1>
           </div>
           <div className="topbar-actions">
             <StatusPill tone="demo">DEMO DATA</StatusPill>
@@ -121,31 +165,40 @@ function App() {
           </div>
         </header>
 
-        <section className="notice" aria-label="Demo notice">
-          <span>SIMULATED ENVIRONMENT</span>
-          <p>This prototype runs a bounded static assessment in your browser. It does not execute, install, or contact the submitted tool.</p>
+        <section className="notice" aria-label="Community assurance notice">
+          <span>COMMUNITY ASSURANCE</span>
+          <p>Credentials issued here are locally self-attested. Their integrity is verifiable, but they are not a FLINT Stamp or FLINT-verified assurance.</p>
         </section>
 
-        <section className="metric-grid" aria-label="Posture summary">
+        <section className="workflow-steps" aria-label="Tool assurance workflow">
+          {["Submit exact version", "Assess evidence", "Issue community passport", "Assign through Gateway"].map((label, index) => (
+            <div className={completedWorkflowSteps > index ? "workflow-step complete" : "workflow-step"} key={label}>
+              <span>{String(index + 1).padStart(2, "0")}</span>
+              <strong>{label}</strong>
+            </div>
+          ))}
+        </section>
+
+        <section className="metric-grid" aria-label="Current session summary">
           <article>
-            <span>Known agents</span>
-            <strong>24</strong>
-            <small>22 active · 2 frozen</small>
+            <span>Publisher Passports</span>
+            <strong>{submission ? 1 : 0}</strong>
+            <small>Self-attested in this clone</small>
           </article>
           <article>
-            <span>Stamped tools</span>
-            <strong>41</strong>
-            <small>Exact-version approvals</small>
+            <span>Artifact versions</span>
+            <strong>{snapshot.artifactVersions.length}</strong>
+            <small>Immutable SHA-256 bindings</small>
           </article>
           <article>
-            <span>Gateway coverage</span>
-            <strong>87%</strong>
-            <small>Observed, not claimed inventory</small>
+            <span>Community passports</span>
+            <strong>{snapshot.credentials.length}</strong>
+            <small>Locally signed credentials</small>
           </article>
           <article>
-            <span>Blocked calls · 24h</span>
-            <strong>17</strong>
-            <small>Policy enforced before execution</small>
+            <span>FLINT Stamps</span>
+            <strong>0</strong>
+            <small>Command verification required</small>
           </article>
         </section>
 
@@ -153,10 +206,10 @@ function App() {
           <article className="panel assessment-panel">
             <div className="panel-header">
               <div>
-                <p className="eyebrow">ARTIFACT INTAKE</p>
-                <h2>Assess a tool manifest</h2>
+                <p className="eyebrow">PUBLISHER INTAKE</p>
+                <h2>Submit an exact tool version</h2>
               </div>
-              <StatusPill tone={report?.verdict?.toLowerCase() ?? "neutral"}>{scanning ? "SCANNING" : report?.verdict ?? "READY"}</StatusPill>
+              <StatusPill tone={report?.verdict?.toLowerCase() ?? "neutral"}>{scanning ? "ASSESSING" : report?.verdict ?? "READY"}</StatusPill>
             </div>
 
             <div className="fixture-switch" role="group" aria-label="Demo artifact">
@@ -194,9 +247,17 @@ function App() {
               </div>
             </div>
 
+            {submission && (
+              <div className="intake-receipt">
+                <span>Immutable version</span>
+                <code>{submission.artifactVersion.id}</code>
+                <small>{submission.artifactVersion.digest}</small>
+              </div>
+            )}
+
             {error && <p className="error-message" role="alert">{error}</p>}
-            <button className="primary-button" type="button" disabled={scanning} onClick={() => void runScan()}>
-              {scanning ? "Running bounded assessment…" : "Run assessment"}
+            <button className="primary-button" type="button" disabled={scanning || issuing} onClick={() => void runAssessment()}>
+              {scanning ? "Submitting and assessing…" : report ? "Re-submit exact version" : "Submit exact version & assess"}
             </button>
           </article>
 
@@ -205,8 +266,8 @@ function App() {
               <ScoreRing report={report} />
               <div>
                 <p className="eyebrow">FLINT ASSESSMENT CONTRACT V0</p>
-                <h2>{report?.verdict === "PASS" ? "Eligible for stamp review" : report?.verdict === "FAIL" ? "Stamp blocked" : report?.verdict === "ERROR" ? "Assessment failed closed" : "Controls required"}</h2>
-                <p>{report?.findings.length ?? 0} findings across declared instructions, schemas, annotations, and destinations.</p>
+                <h2>{report?.verdict === "PASS" ? "Eligible for community issuance" : report?.verdict === "FAIL" ? "Tool Passport blocked" : report?.verdict === "ERROR" ? "Assessment failed closed" : report ? "Controls required" : "Awaiting exact-version submission"}</h2>
+                <p>{report ? `${report.findings.length} findings across declared instructions, schemas, annotations, and destinations.` : "Submit the selected manifest to create its immutable version and assessment evidence."}</p>
               </div>
             </div>
 
@@ -220,8 +281,8 @@ function App() {
                 <strong>{report ? `${report.coverage.status.toUpperCase()} · ${report.coverage.completedChecks}/${report.coverage.requiredChecks}` : "Awaiting assessment"}</strong>
               </div>
               <div className="coverage-row">
-                <span>Policy</span>
-                <strong>{report ? `${report.policy.id} · ${report.policy.version}` : "Awaiting assessment"}</strong>
+                <span>Adapter</span>
+                <strong>{report ? `${provider.scanner.descriptor.displayName} · ${report.scanner.version}` : "Community Scanner"}</strong>
               </div>
             </div>
 
@@ -229,12 +290,17 @@ function App() {
               {report?.failure ? (
                 <div className="empty-finding failed-closed">
                   <span>!</span>
-                  <div><strong>{report.failure.code}</strong><p>{report.failure.message} This result cannot support a FLINT Stamp.</p></div>
+                  <div><strong>{report.failure.code}</strong><p>{report.failure.message} This result cannot support a Tool Passport or FLINT Stamp.</p></div>
+                </div>
+              ) : !report ? (
+                <div className="empty-finding neutral-finding">
+                  <span>·</span>
+                  <div><strong>No assessment yet</strong><p>The local provider keeps the builder flow credential-free and executes no submitted tool process.</p></div>
                 </div>
               ) : sortedFindings.length === 0 ? (
                 <div className="empty-finding">
                   <span>✓</span>
-                  <div><strong>No deterministic risks detected</strong><p>Human review and deeper adapters remain required before a FLINT Stamp is issued.</p></div>
+                  <div><strong>No deterministic risks detected</strong><p>This bounded result can support a self-attested community credential. FLINT verification requires Command.</p></div>
                 </div>
               ) : sortedFindings.slice(0, 5).map((finding) => (
                 <div className="finding" key={finding.id}>
@@ -247,18 +313,60 @@ function App() {
                 </div>
               ))}
             </div>
+
+            <button
+              className="passport-button"
+              type="button"
+              disabled={issuing || report?.verdict !== "PASS" || !submission}
+              onClick={() => void issuePassport()}
+            >
+              {issuing ? "Signing community credential…" : credential ? "Re-issue community Tool Passport" : "Issue community Tool Passport"}
+            </button>
           </article>
         </section>
+
+        {credential && verification && (
+          <section className="panel credential-panel" aria-label="Issued Tool Passport">
+            <div className="credential-heading">
+              <div>
+                <p className="eyebrow">SIGNED TOOL PASSPORT</p>
+                <h2>{credential.passport.toolName}</h2>
+              </div>
+              <StatusPill tone={verification.integrityValid ? "pass" : "fail"}>
+                {verification.integrityValid ? "SIGNATURE VALID" : "SIGNATURE INVALID"}
+              </StatusPill>
+            </div>
+            <div className="assurance-grid">
+              <div><span>Assurance</span><strong>COMMUNITY SELF-ATTESTED</strong></div>
+              <div><span>FLINT verified</span><strong>NO</strong></div>
+              <div><span>Issuer</span><strong>{credential.passport.issuerId}</strong></div>
+              <div><span>Exact version</span><strong>{credential.passport.artifactVersion}</strong></div>
+              <div><span>Assessment</span><strong>{credential.passport.assessmentId}</strong></div>
+              <div><span>Verification method</span><strong>{credential.proof.verificationMethod}</strong></div>
+            </div>
+            <div className="proof-row">
+              <span>Proof</span>
+              <code>{credential.proof.proofValue}</code>
+            </div>
+            <div className="managed-callout">
+              <div>
+                <strong>Need authoritative assurance?</strong>
+                <p>FLINT Command adds managed identity, continuous reassessment, FLINT-controlled signing, revocation, monitoring, and network intelligence.</p>
+              </div>
+              <a href="https://flint.network/command/app" target="_blank" rel="noreferrer">Open FLINT Command</a>
+            </div>
+          </section>
+        )}
 
         <section className="panel policy-strip">
           <div>
             <p className="eyebrow">RUNTIME INTERSECTION</p>
-            <h2>Identity ∩ Stamp ∩ Assignment ∩ Context</h2>
+            <h2>Identity ∩ Passport ∩ Assignment ∩ Context</h2>
           </div>
           <div className="policy-flow" aria-label="Gateway policy sequence">
-            <span>Agent identity</span><b>→</b><span>Semantic authority</span><b>→</b><span>Stamped tool</span><b>→</b><span>Signed decision</span>
+            <span>Agent identity</span><b>→</b><span>Semantic authority</span><b>→</b><span>Assessed tool</span><b>→</b><span>Signed decision</span>
           </div>
-          <StatusPill tone="pass">ENFORCED</StatusPill>
+          <StatusPill tone="pass">FAIL CLOSED</StatusPill>
         </section>
       </main>
     </div>

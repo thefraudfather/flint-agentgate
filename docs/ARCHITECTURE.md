@@ -23,6 +23,8 @@ The Community UI separates the trust loop into five functional views: Overview, 
 
 Tool Assessments uses one editable `ArtifactManifest` throughout the trust loop. Builder fields cover publisher and artifact provenance, exact version, tool identity, declared capabilities and destinations, data classes, behavior annotations, JSON input schema, and instructions. Safe and risky examples populate those same fields rather than entering through a separate code path. Any edit clears stale assessment, credential, assignment, gateway, and evidence state before a new immutable version can be created. The source URL is stored as provenance only; this prototype does not fetch or execute it.
 
+Identity Registry uses one editable `IdentityRegistryDraft` after Tool Passport issuance. The draft captures organization and principal identity, a declared agent build fingerprint, observed evidence and coverage limits, the Agent Capability Claim, principal Semantic Authority Grant, exact-version Tool Semantic Contract, and requested Assignment Grant. Before any identity record is committed, the Local Trust Provider materializes every versioned contract and runs the existing assignment policy as a preflight. Invalid records or requested scope expansion fail before Registry mutation. Committed records are locked for the current ephemeral demo session.
+
 ```text
 Community UI
   -> TrustProvider

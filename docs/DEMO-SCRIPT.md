@@ -21,13 +21,15 @@ This script matches the Community build. It does not claim a FLINT Stamp, produc
 
 ## 1:05–1:40 — Bind identity, authority, and tool semantics
 
-1. In the Identity Registry, contrast:
+1. Edit the organization, principal, agent name, observed evidence, or mandate to show that the Registry accepts builder and operator input.
+2. Contrast the four independent envelopes:
    - **CAN** — Agent Capability Claim;
    - **MAY** — principal-issued Semantic Authority Grant;
    - **TOOL** — exact-version Tool Semantic Contract;
    - **MAY NOW** — the narrow Assignment Grant.
-2. Select **Claim agent & assign eligible tool**; the interface advances to **Gateway Policy**.
-3. The lifecycle advances from Observed through Correlated and Verified to Governed. Governed coverage becomes one of one on the named demo surface.
+3. Select **Register identity and semantic authority**. The Registry preflights the full assignment intersection before writing any identity record.
+4. Select **Claim agent and assign eligible tool**; the interface advances to **Gateway Policy**.
+5. The lifecycle advances from Observed through Correlated and Verified to Governed. Governed coverage becomes one of one on the named demo surface.
 
 ## 1:40–2:20 — Invoke and inspect signed evidence
 

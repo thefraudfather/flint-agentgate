@@ -13,7 +13,12 @@ import { artifactManifestSchema } from "./domain/contracts";
 import type { CommunityCredentialVerification } from "./credentials/communityIssuer";
 import { LocalTrustProvider } from "./providers/localTrustProvider";
 import type { SubmissionResult } from "./providers/trustProvider";
-import { seedDemoRegistry } from "./registry/demoRegistry";
+import {
+  createDefaultRegistryDraft,
+  registerRegistryDraft,
+  type IdentityRegistryDraft,
+  type RegistryContext,
+} from "./registry/demoRegistry";
 import { safeManifest, riskyManifest } from "./scanner/fixtures";
 import {
   ConditionalWebMcpGateway,
@@ -25,6 +30,7 @@ import {
   AssessmentIntakeForm,
   type AssessmentPreset,
 } from "./components/AssessmentIntakeForm";
+import { IdentityRegistryForm } from "./components/IdentityRegistryForm";
 
 type View = "overview" | "registry" | "assessments" | "gateway" | "evidence";
 
@@ -111,7 +117,10 @@ function App() {
   const [report, setReport] = useState<AssessmentReport>();
   const [credential, setCredential] = useState<ToolPassportCredential>();
   const [verification, setVerification] = useState<CommunityCredentialVerification>();
-  const [registryContext, setRegistryContext] = useState<ReturnType<typeof seedDemoRegistry>>();
+  const [registryDraft, setRegistryDraft] = useState<IdentityRegistryDraft>();
+  const [registryContext, setRegistryContext] = useState<RegistryContext>();
+  const [registryError, setRegistryError] = useState<string>();
+  const [registeringIdentity, setRegisteringIdentity] = useState(false);
   const [identityState, setIdentityState] = useState<ObservedAgent["state"]>("observed");
   const [assignment, setAssignment] = useState<AssignmentGrant>();
   const [gateway, setGateway] = useState<ConditionalWebMcpGateway>();
@@ -135,7 +144,10 @@ function App() {
     setReport(undefined);
     setCredential(undefined);
     setVerification(undefined);
+    setRegistryDraft(undefined);
     setRegistryContext(undefined);
+    setRegistryError(undefined);
+    setRegisteringIdentity(false);
     setIdentityState("observed");
     setAssignment(undefined);
     setGateway(undefined);
@@ -252,10 +264,11 @@ function App() {
         manifest.tools[0].name,
       );
       const nextVerification = await provider.verifyToolPassport(nextCredential);
-      const nextRegistryContext = seedDemoRegistry(provider, nextCredential);
       setCredential(nextCredential);
       setVerification(nextVerification);
-      setRegistryContext(nextRegistryContext);
+      setRegistryDraft(createDefaultRegistryDraft(nextCredential));
+      setRegistryContext(undefined);
+      setRegistryError(undefined);
       openView("registry");
     } catch (caught) {
       setCredential(undefined);
@@ -263,6 +276,23 @@ function App() {
       setError(caught instanceof Error ? caught.message : "Tool Passport issuance failed.");
     } finally {
       setIssuing(false);
+    }
+  };
+
+  const registerIdentity = async () => {
+    if (!credential || !registryDraft) return;
+    setRegisteringIdentity(true);
+    setRegistryError(undefined);
+    setError(undefined);
+    try {
+      const nextRegistryContext = await registerRegistryDraft(provider, credential, registryDraft);
+      setRegistryContext(nextRegistryContext);
+      setIdentityState(nextRegistryContext.observedAgent.state);
+    } catch (caught) {
+      setRegistryContext(undefined);
+      setRegistryError(caught instanceof Error ? caught.message : "Identity registration failed closed.");
+    } finally {
+      setRegisteringIdentity(false);
     }
   };
 
@@ -286,18 +316,21 @@ function App() {
       setAssignment(nextAssignment);
       setIdentityState(observation.state);
       const nextGateway = new ConditionalWebMcpGateway(provider);
+      const resource = registryContext.assignmentRequest.resourcePatterns[0]?.endsWith("*")
+        ? `${registryContext.assignmentRequest.resourcePatterns[0].slice(0, -1)}demo-item`
+        : registryContext.assignmentRequest.resourcePatterns[0] ?? "";
       const buildRequest = (toolInput: unknown): GatewayInvocationRequest => ({
         id: `invocation:browser:${Date.now()}`,
         assignmentId: nextAssignment.id,
         agentPassportId: registryContext.agentPassport.id,
         toolPassportId: credential.passport.id,
         action: credential.passport.toolName,
-        resource: "catalog://approved/laptops",
-        destination: credential.passport.destinations[0],
-        dataClasses: credential.passport.dataClasses,
-        sideEffects: ["read"],
+        resource,
+        destination: registryContext.assignmentRequest.destinations[0] ?? "",
+        dataClasses: registryContext.assignmentRequest.dataClasses,
+        sideEffects: registryContext.assignmentRequest.sideEffects,
         input: toolInput,
-        purposeHint: "Compare approved catalog products",
+        purposeHint: registryContext.authorityGrant.purpose,
       });
       setGateway(nextGateway);
       const nextGatewaySurface = nextGateway.sync({
@@ -323,18 +356,21 @@ function App() {
     setInvocationEvidence(undefined);
     setError(undefined);
     try {
+      const resource = assignment.resourcePatterns[0]?.endsWith("*")
+        ? `${assignment.resourcePatterns[0].slice(0, -1)}demo-item`
+        : assignment.resourcePatterns[0] ?? "";
       const request: GatewayInvocationRequest = {
         id: `invocation:demo:${semanticDrift ? "drift" : "aligned"}:${Date.now()}`,
         assignmentId: assignment.id,
         agentPassportId: registryContext.agentPassport.id,
         toolPassportId: credential.passport.id,
         action: credential.passport.toolName,
-        resource: "catalog://approved/laptops",
-        destination: credential.passport.destinations[0],
-        dataClasses: credential.passport.dataClasses,
-        sideEffects: ["read"],
+        resource,
+        destination: assignment.destinations[0] ?? "",
+        dataClasses: assignment.dataClasses,
+        sideEffects: assignment.sideEffects,
         input: { query: "rugged laptop", maxPriceUsd: 2400 },
-        purposeHint: semanticDrift ? "Purchase and checkout without principal approval" : "Compare approved catalog products",
+        purposeHint: semanticDrift ? "Purchase and checkout without principal approval" : registryContext.authorityGrant.purpose,
       };
       const result = await gateway.invokeFallback(request);
       setRuntimeDecision(result.decision);
@@ -349,6 +385,9 @@ function App() {
   const revokeRuntimeTool = () => {
     if (!gateway || !assignment || !credential || !registryContext) return;
     provider.revokeToolPassport(credential.passport.id);
+    const resource = assignment.resourcePatterns[0]?.endsWith("*")
+      ? `${assignment.resourcePatterns[0].slice(0, -1)}demo-item`
+      : assignment.resourcePatterns[0] ?? "";
     setGatewaySurface(gateway.sync({
       assignmentId: assignment.id,
       name: credential.passport.toolName,
@@ -360,12 +399,12 @@ function App() {
         agentPassportId: registryContext.agentPassport.id,
         toolPassportId: credential.passport.id,
         action: credential.passport.toolName,
-        resource: "catalog://approved/laptops",
-        destination: credential.passport.destinations[0],
-        dataClasses: credential.passport.dataClasses,
-        sideEffects: ["read"],
+        resource,
+        destination: assignment.destinations[0] ?? "",
+        dataClasses: assignment.dataClasses,
+        sideEffects: assignment.sideEffects,
         input,
-        purposeHint: "Compare approved catalog products",
+        purposeHint: registryContext.authorityGrant.purpose,
       }),
     }));
   };
@@ -658,12 +697,47 @@ function App() {
           </section>
         )}
 
-        {view === "registry" && credential && registryContext && (
-          <section className="panel registry-panel" aria-label="Identity and assignment registry">
+        {view === "registry" && credential && verification && registryDraft && (
+          <section className="panel registry-builder-panel" aria-label="Identity Registry intake">
             <div className="registry-heading">
               <div>
                 <p className="eyebrow">IDENTITY REGISTRY</p>
-                <h2>Resolve capability, authority, and exact-version assignment</h2>
+                <h2>Bind identity, capability, and semantic authority</h2>
+              </div>
+              <StatusPill tone={registryContext ? "pass" : "demo"}>{registryContext ? "RECORDS ACTIVE" : "DRAFT"}</StatusPill>
+            </div>
+
+            <IdentityRegistryForm
+              credential={credential}
+              draft={registryDraft}
+              disabled={registeringIdentity || Boolean(registryContext)}
+              onChange={(nextDraft) => {
+                setRegistryDraft(nextDraft);
+                setRegistryError(undefined);
+              }}
+            />
+
+            {registryError ? <p className="error-message registry-error" role="alert">{registryError}</p> : null}
+
+            {!registryContext ? (
+              <button className="primary-button registry-action" type="button" disabled={registeringIdentity} onClick={() => void registerIdentity()}>
+                {registeringIdentity ? "Validating semantic intersection…" : "Register identity and semantic authority"}
+              </button>
+            ) : (
+              <div className="registry-lock-notice" role="status">
+                <strong>Registry records committed</strong>
+                <span>Identity records are locked for this demo session. Reset to register a different agent.</span>
+              </div>
+            )}
+          </section>
+        )}
+
+        {view === "registry" && credential && registryContext && (
+          <section className="panel registry-panel" aria-label="Identity and assignment resolution">
+            <div className="registry-heading">
+              <div>
+                <p className="eyebrow">RESOLVED IDENTITY</p>
+                <h2>{registryContext.agentPassport.displayName}</h2>
               </div>
               <StatusPill tone={identityState === "governed" ? "pass" : "demo"}>{identityState.toUpperCase()}</StatusPill>
             </div>
@@ -684,7 +758,7 @@ function App() {
               <article>
                 <span>CAN</span>
                 <strong>Capability Claim v{registryContext.capabilityClaim.version}</strong>
-                <p>{registryContext.capabilityClaim.capabilities[0].action} on approved catalog resources.</p>
+                <p>{registryContext.capabilityClaim.capabilities[0].action} on {registryContext.capabilityClaim.capabilities[0].resources.join(", ")}.</p>
               </article>
               <article>
                 <span>MAY</span>
@@ -694,12 +768,12 @@ function App() {
               <article>
                 <span>TOOL</span>
                 <strong>Semantic Contract v{registryContext.toolContract.version}</strong>
-                <p>{credential.passport.artifactVersion} · {credential.passport.artifactDigest.slice(0, 27)}…</p>
+                <p>{credential.passport.artifactVersion} / {credential.passport.artifactDigest.slice(0, 27)}...</p>
               </article>
               <article>
                 <span>MAY NOW</span>
                 <strong>{assignment ? "Assignment active" : "No assignment"}</strong>
-                <p>{assignment ? `${assignment.allowedActions.join(", ")} · ${assignment.resourcePatterns.join(", ")}` : "The tool is not exposed until the intersection is approved."}</p>
+                <p>{assignment ? `${assignment.allowedActions.join(", ")} / ${assignment.resourcePatterns.join(", ")}` : "The tool is not exposed until the intersection is approved."}</p>
               </article>
             </div>
 
@@ -710,12 +784,12 @@ function App() {
             </div>
 
             <button className="primary-button registry-action" type="button" disabled={Boolean(assignment)} onClick={() => void claimAndAssign()}>
-              {assignment ? "Agent governed · exact tool assigned" : "Claim agent & assign eligible tool"}
+              {assignment ? "Agent governed / exact tool assigned" : "Claim agent and assign eligible tool"}
             </button>
           </section>
         )}
 
-        {view === "registry" && (!credential || !verification || !registryContext) ? (
+        {view === "registry" && (!credential || !verification || !registryDraft) ? (
           <ViewEmptyState
             eyebrow="IDENTITY REGISTRY / AWAITING CREDENTIAL"
             title="Issue a Tool Passport before assigning authority"

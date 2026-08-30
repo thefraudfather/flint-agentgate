@@ -69,13 +69,11 @@ button:focus-visible {
   display: grid;
   place-items: center;
   width: 34px;
-  height: 34px;
-  border: 1px solid var(--cyan);
-  color: var(--cyan);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-weight: 800;
-  box-shadow: inset 0 0 18px rgba(0, 200, 255, 0.12);
+  height: 42px;
+  filter: drop-shadow(0 0 9px rgba(0, 200, 255, 0.2));
 }
+
+.brand-mark img { display: block; width: 25px; height: 40px; object-fit: contain; }
 
 .brand-lockup div { display: grid; gap: 2px; }
 .brand-lockup strong { font-size: 14px; letter-spacing: 0.16em; }
@@ -285,8 +283,8 @@ h2 { margin-bottom: 0; font-size: 17px; line-height: 1.3; letter-spacing: -0.015
 .constellation-core-mark img { display: block; width: 30px; height: 48px; object-fit: contain; filter: drop-shadow(0 0 8px rgba(0,200,255,.22)); }
 .constellation-core strong,
 .constellation-core > span:last-child { position: absolute; z-index: 1; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; white-space: nowrap; }
-.constellation-core strong { bottom: 4px; color: var(--text); font-size: 9px; letter-spacing: .18em; }
-.constellation-core > span:last-child { bottom: -11px; color: #65808d; font-size: 7px; letter-spacing: .14em; }
+.constellation-core strong { left: 50%; bottom: 0; margin-left: 1px; transform: translateX(-50%); color: var(--text); font-size: 9px; letter-spacing: .17em; }
+.constellation-core > span:last-child { left: 50%; bottom: -13px; transform: translateX(-50%); color: #65808d; font-size: 7px; letter-spacing: .14em; }
 
 .constellation-agent {
   --agent-tone: var(--cyan);
@@ -325,6 +323,21 @@ h2 { margin-bottom: 0; font-size: 17px; line-height: 1.3; letter-spacing: -0.015
   animation: node-breathe 2.2s ease-in-out infinite;
 }
 .agent-node-code { font: 700 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .04em; }
+.agent-node-signal {
+  position: absolute;
+  right: -3px;
+  top: -3px;
+  display: grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--agent-tone);
+  border-radius: 50%;
+  color: #03100d;
+  background: var(--agent-tone);
+  font: 800 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  box-shadow: 0 0 9px color-mix(in srgb, var(--agent-tone) 42%, transparent);
+}
 .agent-node-label {
   position: absolute;
   top: 48px;

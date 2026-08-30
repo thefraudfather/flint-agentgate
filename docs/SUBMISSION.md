@@ -29,7 +29,7 @@ The submission-period work includes:
 - fail-closed authorization across action, resource, destination, data class, and side effect;
 - invocation-time WebMCP eligibility checks and removal after revocation;
 - signed decision evidence tied to exact policy and artifact versions;
-- a Community Fleet Constellation that visualizes local declarations and the instrumented demo agent without claiming universal discovery; and
+- a Community Fleet Constellation that visualizes local declarations, explicitly simulated valid/drift states, and the instrumented demo agent without claiming universal discovery or Community-issued FLINT passports; and
 - a visible fallback that uses the same policy path when native WebMCP is unavailable.
 
 ## Why WebMCP is the right surface

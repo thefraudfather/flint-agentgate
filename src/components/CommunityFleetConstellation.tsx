@@ -30,8 +30,13 @@ const TONE_LABEL: Record<CommunityFleetTone, string> = {
   revoked: "Revoked",
 };
 
+const INSPECTOR_DISMISS_MS = 6_000;
+
 function sourceLabel(agent: CommunityFleetAgent) {
-  return agent.source === "instrumented-demo" ? "Instrumented demo surface" : "Local sample declaration";
+  if (agent.source === "instrumented-demo") return "Instrumented demo surface";
+  if (agent.source === "flint-valid-sample") return "Simulated FLINT-valid sample";
+  if (agent.source === "drift-alert-sample") return "Simulated authority drift";
+  return "Local sample declaration";
 }
 
 export function CommunityFleetConstellation(props: CommunityFleetConstellationProps) {
@@ -42,8 +47,9 @@ export function CommunityFleetConstellation(props: CommunityFleetConstellationPr
   const popoutRef = useRef<HTMLDivElement>(null);
   const packetRef = useRef<HTMLSpanElement>(null);
   const packetStartedAtRef = useRef<number | null>(null);
-  const activeAgentIdRef = useRef("primary-demo-agent");
-  const [pinnedAgentId, setPinnedAgentId] = useState("primary-demo-agent");
+  const activeAgentIdRef = useRef<string | null>(null);
+  const dismissTimerRef = useRef<number | null>(null);
+  const [pinnedAgentId, setPinnedAgentId] = useState<string | null>(null);
   const [hoveredAgentId, setHoveredAgentId] = useState<string | null>(null);
   const [reducedMotion, setReducedMotion] = useState(false);
 
@@ -71,9 +77,23 @@ export function CommunityFleetConstellation(props: CommunityFleetConstellationPr
   );
 
   const activeAgentId = hoveredAgentId ?? pinnedAgentId;
-  const activeAgent = agents.find((agent) => agent.id === activeAgentId) ?? agents[0];
+  const activeAgent = agents.find((agent) => agent.id === activeAgentId);
   agentsRef.current = agents;
-  activeAgentIdRef.current = activeAgent.id;
+  activeAgentIdRef.current = activeAgent?.id ?? null;
+
+  const inspectAgent = (agentId: string) => {
+    if (dismissTimerRef.current !== null) window.clearTimeout(dismissTimerRef.current);
+    if (pinnedAgentId === agentId) {
+      setPinnedAgentId(null);
+      dismissTimerRef.current = null;
+      return;
+    }
+    setPinnedAgentId(agentId);
+    dismissTimerRef.current = window.setTimeout(() => {
+      setPinnedAgentId(null);
+      dismissTimerRef.current = null;
+    }, INSPECTOR_DISMISS_MS);
+  };
 
   useEffect(() => {
     const query = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -81,6 +101,10 @@ export function CommunityFleetConstellation(props: CommunityFleetConstellationPr
     sync();
     query.addEventListener("change", sync);
     return () => query.removeEventListener("change", sync);
+  }, []);
+
+  useEffect(() => () => {
+    if (dismissTimerRef.current !== null) window.clearTimeout(dismissTimerRef.current);
   }, []);
 
   useEffect(() => {
@@ -100,7 +124,8 @@ export function CommunityFleetConstellation(props: CommunityFleetConstellationPr
 
     const positionPopout = () => {
       const popout = popoutRef.current;
-      const position = positionsRef.current.get(activeAgentIdRef.current);
+      const selectedId = activeAgentIdRef.current;
+      const position = selectedId ? positionsRef.current.get(selectedId) : undefined;
       if (!popout || !position || width === 0 || height === 0) return;
 
       const popoutWidth = Math.min(258, Math.max(210, width - 24));
@@ -187,10 +212,10 @@ export function CommunityFleetConstellation(props: CommunityFleetConstellationPr
         <div>
           <p className="eyebrow">COMMUNITY FLEET CONSTELLATION</p>
           <h2 id="community-fleet-title">See declared agents move through the local trust plane</h2>
-          <p>Hover or focus a node to inspect its identity, scope, mandate, and current demo state.</p>
+          <p>Hover or focus a node to inspect it. Click to pin the inspector for six seconds.</p>
         </div>
         <div className="constellation-boundary" aria-label="Visualization boundary">
-          <span>5 SAMPLE AGENTS</span>
+          <span>7 SAMPLE AGENTS</span>
           <span>1 INSTRUMENTED</span>
           <span>LOCAL DATA</span>
         </div>
@@ -212,7 +237,7 @@ export function CommunityFleetConstellation(props: CommunityFleetConstellationPr
         {agents.map((agent) => (
           <button
             type="button"
-            className={`constellation-agent tone-${agent.tone}${activeAgent.id === agent.id ? " is-active" : ""}`}
+            className={`constellation-agent tone-${agent.tone}${activeAgent?.id === agent.id ? " is-active" : ""}`}
             key={agent.id}
             ref={(node) => {
               if (node) nodeRefs.current.set(agent.id, node);
@@ -222,10 +247,16 @@ export function CommunityFleetConstellation(props: CommunityFleetConstellationPr
             onMouseLeave={() => setHoveredAgentId(null)}
             onFocus={() => setHoveredAgentId(agent.id)}
             onBlur={() => setHoveredAgentId(null)}
-            onClick={() => setPinnedAgentId(agent.id)}
+            onClick={() => inspectAgent(agent.id)}
             aria-label={`Inspect ${agent.name}`}
             aria-pressed={pinnedAgentId === agent.id}
           >
+            {agent.assurance === "flint-passport-valid-sample" ? (
+              <span className="agent-node-signal" aria-hidden="true">✓</span>
+            ) : null}
+            {agent.assurance === "mandate-drift-sample" ? (
+              <span className="agent-node-signal" aria-hidden="true">!</span>
+            ) : null}
             <span className="agent-node-code">{agent.code}</span>
             <span className="agent-node-label">{agent.name}</span>
           </button>
@@ -238,31 +269,33 @@ export function CommunityFleetConstellation(props: CommunityFleetConstellationPr
           aria-hidden="true"
         />
 
-        <div className={`constellation-popout tone-${activeAgent.tone}`} ref={popoutRef} role="status">
-          <div className="popout-heading">
-            <div>
-              <strong>{activeAgent.name}</strong>
-              <span>{sourceLabel(activeAgent)}</span>
+        {activeAgent ? (
+          <div className={`constellation-popout tone-${activeAgent.tone}`} ref={popoutRef} role="status">
+            <div className="popout-heading">
+              <div>
+                <strong>{activeAgent.name}</strong>
+                <span>{sourceLabel(activeAgent)}</span>
+              </div>
+              <span className="popout-state">{TONE_LABEL[activeAgent.tone]}</span>
             </div>
-            <span className="popout-state">{TONE_LABEL[activeAgent.tone]}</span>
+            <dl>
+              <div><dt>Identity</dt><dd>{activeAgent.stateLabel}</dd></div>
+              <div><dt>Tool</dt><dd>{activeAgent.tool}</dd></div>
+              <div><dt>Scope</dt><dd>{activeAgent.scope.join(", ")}</dd></div>
+              <div className="popout-mandate"><dt>Mandate</dt><dd>{activeAgent.mandate}</dd></div>
+            </dl>
           </div>
-          <dl>
-            <div><dt>Identity</dt><dd>{activeAgent.stateLabel}</dd></div>
-            <div><dt>Tool</dt><dd>{activeAgent.tool}</dd></div>
-            <div><dt>Scope</dt><dd>{activeAgent.scope.join(", ")}</dd></div>
-            <div className="popout-mandate"><dt>Mandate</dt><dd>{activeAgent.mandate}</dd></div>
-          </dl>
-        </div>
+        ) : null}
 
         <div className="constellation-legend" aria-label="Fleet state legend">
           <span><i className="legend-local" />Local declaration</span>
-          <span><i className="legend-governed" />Governed</span>
-          <span><i className="legend-block" />Blocked or revoked</span>
+          <span><i className="legend-governed" />FLINT passport valid</span>
+          <span><i className="legend-block" />Scope or mandate changed</span>
         </div>
       </div>
 
       <div className="constellation-disclosure">
-        <p>Community renders records supplied to this clone. It does not discover every agent or claim FLINT verification.</p>
+        <p>Green and red nodes are simulated state examples. Community does not issue FLINT passports, discover every agent, or claim FLINT verification.</p>
         <a href="https://flint.network/command/app" target="_blank" rel="noreferrer">Command adds verified discovery and control</a>
       </div>
     </section>

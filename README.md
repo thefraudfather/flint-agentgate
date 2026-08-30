@@ -32,10 +32,10 @@ This repository is the cloneable **AgentGate Community** reference implementatio
 - Conditional `document.modelContext.registerTool` exposure with a truthful visible fallback when WebMCP is unavailable.
 - Invocation-time eligibility re-resolution so freeze, revocation, and expiry remove the tool or deny stale registered handlers.
 - A responsive Command-style interface with two clearly labeled demo artifacts.
-- A responsive Community Fleet Constellation with moving local sample agents, keyboard-accessible inspection cards, and live gateway decision state.
+- A responsive Community Fleet Constellation with seven moving agents, keyboard-accessible six-second inspection cards, simulated FLINT-valid and authority-drift states, and the live gateway decision state.
 - Tests for the stable contracts, safe and risky assessments, and semantic authorization boundaries.
 
-The constellation visualizes records supplied to the local clone. It does not claim autonomous network discovery or FLINT verification. Managed Command adds verified discovery, fingerprint correlation, continuous monitoring, historical analysis, and response controls.
+The constellation visualizes records supplied to the local clone. Its static green and red nodes are explicitly simulated examples; Community does not issue FLINT passports or claim autonomous network discovery or FLINT verification. Managed Command adds verified discovery, fingerprint correlation, continuous monitoring, historical analysis, and response controls.
 
 The scanner never executes a submitted tool. A PASS is eligibility for additional stamp review, not proof that an artifact is vulnerability-free.
 

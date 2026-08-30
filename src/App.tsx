@@ -272,7 +272,9 @@ function App() {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand-lockup">
-          <span className="brand-mark" aria-hidden="true">F</span>
+          <span className="brand-mark" aria-hidden="true">
+            <img src="/assets/flint-command-icon-blue.png" alt="" />
+          </span>
           <div>
             <strong>FLINT</strong>
             <span>AgentGate Community</span>

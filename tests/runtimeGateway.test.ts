@@ -94,6 +94,27 @@ test("treats empty assignment, contract, and authority constraints as unconstrai
   assert.equal(result.decision.verdict, "ALLOW");
 });
 
+test("enforces the principal's transaction ceiling when an amount is supplied", async () => {
+  const context = await setup();
+  const resolved = structuredClone(context.provider.resolveAssignment(context.assignment.id, { now }));
+  resolved.authorityGrant.maxTransactionUsd = 100;
+
+  const atLimit = await evaluateResolvedInvocation({
+    now,
+    resolved,
+    request: { ...context.request, id: "invocation:at-limit", transactionUsd: 100 },
+  });
+  const overLimit = await evaluateResolvedInvocation({
+    now,
+    resolved,
+    request: { ...context.request, id: "invocation:over-limit", transactionUsd: 100.01 },
+  });
+
+  assert.equal(atLimit.decision.verdict, "ALLOW");
+  assert.equal(overLimit.decision.verdict, "BLOCK");
+  assert(overLimit.decision.reasonCodes.includes("TRANSACTION_LIMIT_EXCEEDED"));
+});
+
 test("semantic drift escalates an otherwise eligible invocation to BLOCK", async () => {
   const context = await setup();
   const result = await context.provider.evaluateInvocation({
@@ -244,5 +265,28 @@ test("WebMCP registration is removed and stale handlers deny after revocation", 
     now,
   });
   assert.equal(ineligible.eligibility, "ineligible");
+  assert.equal(disposed, true);
+});
+
+test("disposing the Gateway removes its native WebMCP registration", async () => {
+  const context = await setup();
+  let disposed = false;
+  const gateway = new ConditionalWebMcpGateway(context.provider, {
+    modelContext: {
+      registerTool() {
+        return () => { disposed = true; };
+      },
+    },
+  });
+  gateway.sync({
+    assignmentId: context.assignment.id,
+    name: "catalog.lookup",
+    description: "Catalog lookup",
+    buildRequest: () => context.request,
+    now,
+  });
+
+  gateway.dispose();
+
   assert.equal(disposed, true);
 });

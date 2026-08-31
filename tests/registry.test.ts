@@ -11,13 +11,24 @@ import {
   toolSemanticContractSchema,
 } from "../src/domain/contracts";
 import { LocalTrustProvider } from "../src/providers/localTrustProvider";
-import { AssignmentRejectedError } from "../src/registry/assignmentPolicy";
+import { AssignmentRejectedError, intersectPatternScopes } from "../src/registry/assignmentPolicy";
 import { classifyAuthorityChange } from "../src/registry/authorityChanges";
 import { IdentityRegistry } from "../src/registry/identityRegistry";
 import { safeManifest } from "../src/scanner/fixtures";
 
 const now = "2026-08-30T12:00:00.000Z";
 const expiresAt = "2026-09-30T12:00:00.000Z";
+
+test("pattern intersection narrows a replacement assignment without expanding it", () => {
+  assert.deepEqual(
+    intersectPatternScopes(["catalog://approved/*"], ["catalog://approved/laptops/*"]),
+    ["catalog://approved/laptops/*"],
+  );
+  assert.deepEqual(
+    intersectPatternScopes(["catalog://approved/laptops/*"], ["catalog://approved/*"]),
+    ["catalog://approved/laptops/*"],
+  );
+});
 
 async function setupRegistry() {
   const provider = new LocalTrustProvider();
@@ -222,6 +233,10 @@ test("authority revisions stay unusable until approval and supersede old assignm
     request: validRequest,
     now,
   });
+  const correlated = context.registry.transitionObservedAgent(context.observedAgent.id, "correlated");
+  const verified = context.registry.transitionObservedAgent(correlated.id, "verified", context.agentPassport.id);
+  const governed = context.registry.transitionObservedAgent(verified.id, "governed");
+  assert.equal(governed.state, "governed");
   const proposedGrant = semanticAuthorityGrantSchema.parse({
     ...context.authorityGrant,
     id: "authority-grant:procurement:v2",
@@ -263,10 +278,15 @@ test("authority revisions stay unusable until approval and supersede old assignm
     authorityGrantId: proposedGrant.id,
     toolPassportId: context.credential.passport.id,
     toolContractId: context.toolContract.id,
-    request: { ...validRequest, id: "assignment:replacement", resourcePatterns: ["catalog://approved/parts/*"] },
+    request: {
+      ...validRequest,
+      id: "assignment:replacement",
+      resourcePatterns: intersectPatternScopes(validRequest.resourcePatterns, proposedGrant.permittedRoots),
+    },
     now,
   });
   assert.equal(context.registry.resolveAssignment(replacement.id, { now }).authorityGrant.version, 2);
+  assert.equal(context.registry.snapshot().observedAgents[0].state, "governed");
 });
 
 test("initial authority registration is immutable and cannot bypass revision approval", async () => {

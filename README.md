@@ -10,15 +10,25 @@ This repository is an isolated hackathon prototype. It does not modify or deploy
 
 AgentGate is for hackathon judges, security teams, and agent-platform builders evaluating how an agent can receive only the exact tool authority it needs. In one browser session, the demo assesses a declared tool version, binds agent capability to principal authority and tool semantics, exposes the eligible capability, and produces signed local evidence for both allowed and blocked requests.
 
+## Core features
+
+- **Tool Assessment:** submit a declared MCP tool version, run the bounded Community Scanner, and inspect its exact-version digest, findings, and coverage.
+- **Community Tool Passport:** issue and locally verify an ephemeral `community-self-attested` credential for a passing tool version. It is not a FLINT Stamp.
+- **Identity Registry:** bind the agent to an organization and principal, then intersect CAN, MAY, TOOL, and MAY NOW before assignment.
+- **Gateway and WebMCP fallback:** expose only eligible tools, recheck policy for every request, and use the same evaluator through native WebMCP or the visible browser fallback.
+- **Evidence + help:** use **Records** for signed decisions, **How it works** for the guided explanation, and **Glossary** for plain-language definitions. Records can be exported with **Copy credential JSON** or **Download JSON**.
+- **Fleet and coverage:** inspect the Community Fleet Constellation and measured coverage on named demo surfaces, with simulated states and blind spots labeled explicitly.
+
 ## Judge in 90 seconds
 
-1. Open the [live demo](https://flint-agentgate.vercel.app) and select **Tool Assessments**.
-2. Keep **Safe example**, select **Assess this tool version**, then **Issue community Tool Passport**.
-3. In **Identity Registry**, select **Register identity and semantic authority**, then **Claim agent and assign eligible tool**.
-4. In **Gateway Policy**, select **Run allowed request**, then **View signed evidence** to inspect and export the ALLOW record.
-5. Return to **Gateway Policy**, select **Run out-of-mandate request** to see BLOCK, then **Revoke tool access** to remove the eligible surface.
+1. Open the [live demo](https://flint-agentgate.vercel.app) and select **Start guided safe path** on **Overview**.
+2. In **Tool assessments**, keep **Safe example**, select **Assess this tool version**, then **Issue community Tool Passport**.
+3. In **Identity registry**, select **Register identity and semantic authority**, then **Claim agent and assign eligible tool**.
+4. In **Gateway policy**, select **Run allowed request**, then **View signed evidence**. Under **Evidence + help**, keep **Records** open and use **Copy credential JSON** or **Download JSON**.
+5. Return to **Gateway policy**, select **Run out-of-mandate request** to see BLOCK, then **Revoke tool access** to remove the eligible surface.
+6. Use **Help & evidence** at any time to open **How it works** or **Glossary**.
 
-The Gateway shows **Native WebMCP** when the browser API is available and **Browser demo** otherwise. Both routes use the same policy evaluator.
+The Gateway shows **Native WebMCP** when the eligible tool is registered through the browser API and **Browser demo** when that API is unavailable. **Run allowed request** and **Run out-of-mandate request** are operator-facing test controls. Both call the same provider and policy evaluator used by the registered handler.
 
 ## Community and Command
 
@@ -64,8 +74,8 @@ Open the printed URL (`http://127.0.0.1:4173` by default). Run `npm run release:
 - Conditional `document.modelContext.registerTool` exposure with a truthful visible fallback when WebMCP is unavailable.
 - Invocation-time eligibility re-resolution so freeze, revocation, and expiry remove the tool or deny stale registered handlers.
 - A responsive Command-style interface with two clearly labeled demo artifacts.
-- Functional Overview, Identity Registry, Tool Assessments, Gateway Policy, and Evidence Center views with prerequisite states and guided workflow transitions.
-- A plain-language guide and glossary inside Evidence Center, plus browser-session decision history with JSON copy and download controls.
+- Functional Overview, Identity Registry, Tool Assessments, Gateway Policy, and Evidence + help views with prerequisite states and guided workflow transitions.
+- Records, How it works, and Glossary sections inside Evidence + help, plus browser-session decision history with **Copy credential JSON** and **Download JSON** controls.
 - A responsive Community Fleet Constellation with seven moving agents, keyboard-accessible six-second inspection cards, simulated FLINT-valid and authority-drift states, and the live gateway decision state.
 - Tests for the stable contracts, safe and risky assessments, and semantic authorization boundaries.
 
@@ -75,15 +85,15 @@ The builder intake hashes and evaluates the submitted manifest fields. The sourc
 
 The default demo flow is:
 
-1. Open **Tool Assessments** and load a safe or risky example, or edit the manifest fields into a custom submission.
+1. Open **Tool assessments** and load a safe or risky example, or edit the manifest fields into a custom submission.
 2. Submit and assess its exact version.
-3. Issue a community Tool Passport only for the passing fixture; the UI advances to **Identity Registry**.
+3. Issue a community Tool Passport only for the passing fixture; the UI advances to **Identity registry**.
 4. Verify the local signature and inspect the explicit assurance level.
 5. Review or edit the organization, principal, observed identity, capability claim, semantic authority, exact-version tool contract, and requested assignment, then register the records.
 6. Optionally propose and approve a new authority version; pending revisions cannot authorize tools and approval supersedes the prior grant.
-7. Claim the observed agent and assign only the preflighted eligible intersection; the UI advances to **Gateway Policy**.
+7. Claim the observed agent and assign only the preflighted eligible intersection; the UI advances to **Gateway policy**.
 8. Run the allowed request through the WebMCP surface or clearly labeled browser demo.
-9. Open **Evidence Center** to inspect, copy, or download the signed record, then run the out-of-mandate request and revoke access from **Gateway Policy**.
+9. Open **Evidence + help**, select **Records**, and inspect, copy, or download the signed record. Then run the out-of-mandate request and revoke access from **Gateway policy**.
 
 All demo state and signing keys are ephemeral to the browser session.
 
@@ -95,7 +105,7 @@ AgentGate feature-detects native WebMCP and exposes only tools whose exact assig
 document.modelContext.registerTool(definition);
 ```
 
-The registered handler re-resolves the assignment and policy at invocation time. In browsers without WebMCP, the visible fallback runs the same provider and policy path instead of simulating native registration.
+The registered handler re-resolves the assignment and policy at invocation time. In browsers without WebMCP, the visible fallback runs the same provider and policy path instead of simulating native registration. The Gateway's request buttons are operator test controls for these paths, not a claim that a browser agent selected the buttons itself.
 
 ## Architecture
 

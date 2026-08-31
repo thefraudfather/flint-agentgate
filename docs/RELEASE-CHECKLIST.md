@@ -2,6 +2,8 @@
 
 The authoritative release is one immutable Git commit. The public repository, Vercel deployment, demo video, Devpost entry, release tag, and freeze record must all identify that same commit.
 
+The unchecked public-candidate, Devpost, and tag items below are intentional final-freeze gates. They must be repeated against the final tagged submission commit and do not indicate that current `main` failed the completed local release gates.
+
 ## Local release gates
 
 - [x] `npm ci` succeeds from a clean clone.
@@ -31,7 +33,7 @@ The authoritative release is one immutable Git commit. The public repository, Ve
 - [x] Verify the default branch and public license rendering.
 - [x] Connect only the new public repository to a separate Vercel project.
 - [x] Use no production credentials; the current static prototype needs none.
-- [ ] Run `npm ci && npm run release:check` against a fresh public clone.
+- [ ] Repeat `npm ci && npm run release:check` against a fresh public clone of the final candidate.
 - [ ] Verify the deployed asset matches the candidate SHA recorded below.
 - [ ] Run the complete judge path on the public URL in a WebMCP-capable browser and the visible fallback.
 - [ ] Recheck security headers, console, keyboard flow, mobile layout, and external links.

@@ -5,7 +5,7 @@ Thank you for improving AgentGate Community.
 ## Development
 
 ```bash
-npm install
+npm ci
 npm test
 npm run typecheck
 npm run build

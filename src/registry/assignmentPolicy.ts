@@ -43,6 +43,14 @@ export function patternContains(container: string, candidate: string): boolean {
   return candidatePrefix.startsWith(containerPrefix);
 }
 
+export function intersectPatternScopes(first: string[], second: string[]): string[] {
+  if (first.length === 0) return [...second];
+  if (second.length === 0) return [...first];
+  return [...new Set(first.flatMap((left) => second.flatMap((right) => (
+    patternContains(left, right) ? [right] : patternContains(right, left) ? [left] : []
+  ))))];
+}
+
 export function everyPatternContained(requested: string[], allowed: string[]): boolean {
   if (requested.length === 0) return allowed.length === 0;
   if (allowed.length === 0) return true;

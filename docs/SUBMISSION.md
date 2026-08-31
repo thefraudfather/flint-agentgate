@@ -15,7 +15,7 @@ This document describes the public release candidate. The live demo and public v
 
 ## Elevator pitch
 
-FLINT AgentGate discovers AI agents, binds versioned identities to semantic authority, screens their tools, and exposes only approved capabilities through a policy-enforced WebMCP gateway with signed evidence.
+FLINT AgentGate turns connected-surface agent observations into versioned identities, screens exact tool versions, enforces semantic authority at a WebMCP gateway, and emits signed evidence.
 
 ## What was built during the submission period
 
@@ -29,9 +29,11 @@ The submission-period work includes:
 - fail-closed authorization across action, resource, destination, data class, and side effect;
 - invocation-time WebMCP eligibility checks and removal after revocation;
 - signed decision evidence tied to exact policy and artifact versions;
-- a Community Fleet Constellation that visualizes local declarations, explicitly simulated valid/drift states, and the instrumented demo agent without claiming universal discovery or Community-issued FLINT passports; and
-- an editable builder assessment intake that validates and hashes custom manifest fields while never fetching or executing the linked artifact; and
-- a visible fallback that uses the same policy path when native WebMCP is unavailable.
+- an append-only authority revision ledger that classifies proposals, records approval or rejection, and invalidates assignments tied to superseded authority;
+- an **Evidence + help** center with **Records**, **How it works**, **Glossary**, browser-session decision history, and JSON copy and download controls;
+- a Community Fleet Constellation that visualizes local declarations, explicitly simulated valid and drift states, and the instrumented demo agent without claiming universal discovery or Community-issued FLINT passports;
+- an editable builder assessment intake that validates and hashes custom manifest fields while never fetching or executing the linked artifact;
+- and a visible fallback that uses the same policy path when native WebMCP is unavailable.
 
 ## Why WebMCP is the right surface
 
@@ -49,7 +51,7 @@ Use `docs/DEMO-SCRIPT.md` and the safe fixture:
 4. Invoke the aligned capability and inspect the ALLOW evidence.
 5. Run the out-of-mandate request and observe BLOCK.
 6. Revoke the Tool Passport and observe the browser surface become unavailable.
-7. Show the risky fixture failing assessment and therefore receiving no credential.
+7. Optional after the timed path: reset the demo and show the risky fixture failing assessment and therefore receiving no credential.
 
 ## Judge setup
 

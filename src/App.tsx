@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type {
   AssessmentReport,
   AssignmentGrant,
@@ -34,6 +34,7 @@ import {
 import { AgentGateGlossary, HowAgentGateWorks } from "./components/EvidenceGuide";
 import { IdentityRegistryForm } from "./components/IdentityRegistryForm";
 import { summarizeGatewayDecision } from "./gateway/decisionCopy";
+import { intersectPatternScopes } from "./registry/assignmentPolicy";
 
 type View = "overview" | "registry" | "assessments" | "gateway" | "evidence";
 type EvidenceTab = "records" | "guide" | "glossary";
@@ -152,6 +153,12 @@ function App() {
   const [issuing, setIssuing] = useState(false);
   const [error, setError] = useState<string>();
 
+  useEffect(() => {
+    if (view === "registry" && registryContext) {
+      document.getElementById("resolved-identity")?.scrollIntoView({ block: "start" });
+    }
+  }, [registryContext, view]);
+
   const openView = (nextView: View) => {
     setView(nextView);
     window.requestAnimationFrame(() => window.scrollTo({ left: 0, top: 0 }));
@@ -163,6 +170,7 @@ function App() {
   };
 
   const clearWorkflowState = () => {
+    gateway?.dispose();
     setProvider(new LocalTrustProvider());
     setSubmission(undefined);
     setReport(undefined);
@@ -267,6 +275,7 @@ function App() {
     setRegistryContext(undefined);
     setIdentityState("observed");
     setAssignment(undefined);
+    gateway?.dispose();
     setGateway(undefined);
     setGatewaySurface(undefined);
     setRuntimeDecision(undefined);
@@ -379,8 +388,19 @@ function App() {
       if (approve) {
         provider.registry.approveAuthorityChange(change.id, registryContext.principal.id);
         const authorityGrant = provider.registry.authorityGrant(change.proposedAuthorityGrantId);
-        setRegistryContext({ ...registryContext, authorityGrant });
+        setRegistryContext({
+          ...registryContext,
+          authorityGrant,
+          assignmentRequest: {
+            ...registryContext.assignmentRequest,
+            resourcePatterns: intersectPatternScopes(
+              registryContext.assignmentRequest.resourcePatterns,
+              authorityGrant.permittedRoots,
+            ),
+          },
+        });
         setAssignment(undefined);
+        gateway?.dispose();
         setGateway(undefined);
         setGatewaySurface(undefined);
         setRuntimeDecision(undefined);
@@ -405,10 +425,16 @@ function App() {
     if (!registryContext || !credential) return;
     setError(undefined);
     try {
-      let observation = provider.registry.transitionObservedAgent(registryContext.observedAgent.id, "correlated");
-      setIdentityState(observation.state);
-      observation = provider.registry.transitionObservedAgent(observation.id, "verified", registryContext.agentPassport.id);
-      setIdentityState(observation.state);
+      let observation = provider.registry.snapshot().observedAgents.find(({ id }) => id === registryContext.observedAgent.id);
+      if (!observation) throw new Error("Observed Agent is not registered.");
+      if (observation.state === "observed") {
+        observation = provider.registry.transitionObservedAgent(observation.id, "correlated");
+        setIdentityState(observation.state);
+      }
+      if (observation.state === "correlated") {
+        observation = provider.registry.transitionObservedAgent(observation.id, "verified", registryContext.agentPassport.id);
+        setIdentityState(observation.state);
+      }
       const nextAssignment = await provider.createAssignment({
         agentPassportId: registryContext.agentPassport.id,
         capabilityClaimId: registryContext.capabilityClaim.id,
@@ -417,9 +443,11 @@ function App() {
         toolContractId: registryContext.toolContract.id,
         request: registryContext.assignmentRequest,
       });
-      observation = provider.registry.transitionObservedAgent(observation.id, "governed");
+      if (observation.state === "verified") {
+        observation = provider.registry.transitionObservedAgent(observation.id, "governed");
+      }
       setAssignment(nextAssignment);
-      setIdentityState(observation.state);
+      setIdentityState("governed");
       const nextGateway = new ConditionalWebMcpGateway(provider);
       const resource = registryContext.assignmentRequest.resourcePatterns[0]?.endsWith("*")
         ? `${registryContext.assignmentRequest.resourcePatterns[0].slice(0, -1)}demo-item`
@@ -437,6 +465,7 @@ function App() {
         input: toolInput,
         purposeHint: registryContext.authorityGrant.purpose,
       });
+      gateway?.dispose();
       setGateway(nextGateway);
       const nextGatewaySurface = nextGateway.sync({
         assignmentId: nextAssignment.id,
@@ -548,6 +577,9 @@ function App() {
   };
   const snapshot = provider.snapshot();
   const completedWorkflowSteps = evidenceHistory.length > 0 ? 5 : assignment ? 4 : credential ? 3 : report ? 2 : submission ? 1 : 0;
+  const governedActivityCurrent = identityState === "governed"
+    && Boolean(assignment)
+    && gatewaySurface?.eligibility === "registered";
 
   return (
     <div className="app-shell">
@@ -603,6 +635,8 @@ function App() {
           <p>This browser creates its own signed records. A signature can reveal changes, but it is not a FLINT Stamp and does not mean FLINT verified the agent or tool.</p>
         </section>
 
+        {error ? <p className="error-message operational-error" role="alert">{error}</p> : null}
+
         <div className="view-surface" key={view}>
         {view === "overview" ? (
           <>
@@ -633,8 +667,8 @@ function App() {
             </article>
             <article>
               <span>Governed activity coverage</span>
-              <strong>{identityState === "governed" ? "1 / 1" : "0 / 1"}</strong>
-              <small>{identityState === "governed" ? "Passport and assignment current" : "No current governed identity yet"}</small>
+              <strong>{governedActivityCurrent ? "1 / 1" : "0 / 1"}</strong>
+              <small>{governedActivityCurrent ? "Passport and assignment current" : gatewaySurface?.eligibility === "ineligible" ? "Tool access removed" : "No current governed identity yet"}</small>
             </article>
             <article>
               <span>Attribution state</span>
@@ -734,7 +768,6 @@ function App() {
             )}
 
             {intakeError && <p className="error-message" role="alert">{intakeError}</p>}
-            {error && <p className="error-message" role="alert">{error}</p>}
             <button className="primary-button" type="button" disabled={scanning || issuing} onClick={() => void runAssessment()}>
               {scanning ? "Submitting and assessing…" : report ? "Reassess this exact version" : "Assess this tool version"}
             </button>
@@ -781,7 +814,7 @@ function App() {
                   <span>✓</span>
                   <div><strong>No deterministic risks detected</strong><p>This bounded result can support a self-attested community credential. FLINT verification requires Command.</p></div>
                 </div>
-              ) : sortedFindings.slice(0, 5).map((finding) => (
+              ) : sortedFindings.map((finding) => (
                 <div className="finding" key={finding.id}>
                   <StatusPill tone={finding.severity}>{finding.severity.toUpperCase()}</StatusPill>
                   <div>
@@ -797,9 +830,9 @@ function App() {
               className="passport-button"
               type="button"
               disabled={issuing || report?.verdict !== "PASS" || !submission}
-              onClick={() => void issuePassport()}
+              onClick={() => credential ? openView("registry") : void issuePassport()}
             >
-              {issuing ? "Signing community credential…" : credential ? "Re-issue community Tool Passport" : "Issue community Tool Passport"}
+              {issuing ? "Signing community credential…" : credential ? "Continue to Identity Registry" : "Issue community Tool Passport"}
             </button>
           </article>
         </section>
@@ -848,6 +881,13 @@ function App() {
               <StatusPill tone={registryContext ? "pass" : "demo"}>{registryContext ? "RECORDS ACTIVE" : "DRAFT"}</StatusPill>
             </div>
 
+            {!registryContext ? (
+              <aside className="registry-novice-cue" aria-label="Guided registry instructions">
+                <strong>Prefilled registry draft</strong>
+                <span>The Safe example values are ready for the guided path. For a custom tool, review every binding. Then select Register identity and semantic authority at the end of this form.</span>
+              </aside>
+            ) : null}
+
             <IdentityRegistryForm
               credential={credential}
               draft={registryDraft}
@@ -874,7 +914,7 @@ function App() {
         )}
 
         {view === "registry" && credential && registryContext && (
-          <section className="panel registry-panel" aria-label="Identity and assignment resolution">
+          <section className="panel registry-panel" id="resolved-identity" aria-label="Identity and assignment resolution">
             <div className="registry-heading">
               <div>
                 <p className="eyebrow">RESOLVED IDENTITY</p>
@@ -1000,14 +1040,17 @@ function App() {
             </div>
 
             <div className="gateway-status-grid">
-              <article><span>Test mode</span><strong>{gatewaySurface.supported ? "Native WebMCP" : "Browser demo"}</strong></article>
+              <article><span>Tool surface</span><strong>{gatewaySurface.supported ? "Native WebMCP" : "Browser demo"}</strong></article>
               <article><span>Available to agent</span><strong>{gatewaySurface.eligibility === "registered" ? "YES" : "NO"}</strong></article>
               <article><span>Exact scope checks</span><strong>RUN FIRST</strong></article>
               <article><span>Purpose check</span><strong>RUNS SECOND</strong></article>
             </div>
             <p className="surface-disclosure">{gatewaySurface.supported
-              ? "This browser exposes the native WebMCP surface. Requests still pass through the same AgentGate policy check."
-              : "This browser cannot call WebMCP directly, so the demo sends the same request through AgentGate's policy check."}</p>
+              ? "This browser exposes the tool through native WebMCP. The buttons below send operator test requests through the same AgentGate policy path."
+              : "This browser cannot expose the tool through native WebMCP. The buttons below send operator test requests through AgentGate's policy path."}</p>
+            {gatewaySurface.eligibility === "ineligible" ? (
+              <p className="surface-removal-reason" role="status"><strong>Access removed:</strong> {gatewaySurface.detail}</p>
+            ) : null}
 
             <div className="gateway-actions">
               <button className="primary-button" type="button" disabled={invoking || gatewaySurface.eligibility !== "registered"} onClick={() => void invokeTool(false)}>

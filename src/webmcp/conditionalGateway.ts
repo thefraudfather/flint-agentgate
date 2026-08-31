@@ -65,6 +65,10 @@ export class ConditionalWebMcpGateway {
     this.#registered.delete(name);
   }
 
+  dispose() {
+    for (const name of [...this.#registered.keys()]) this.#remove(name);
+  }
+
   sync(input: {
     assignmentId: string;
     name: string;

@@ -4,7 +4,7 @@ FLINT AgentGate is an enterprise trust gateway for AI agents and MCP tools. It c
 
 This repository is an isolated hackathon prototype. It does not modify or deploy the production FLINT MVP.
 
-**Try it:** [live demo](https://flint-agentgate.vercel.app) · [public demo video](https://youtu.be/NzE9xj_ylyM)
+**Try it:** [live demo](https://agentgate.flint.network) · [public demo video](https://youtu.be/NzE9xj_ylyM)
 
 ## Who it is for and what it proves
 
@@ -21,7 +21,7 @@ AgentGate is for hackathon judges, security teams, and agent-platform builders e
 
 ## Judge in 90 seconds
 
-1. Open the [live demo](https://flint-agentgate.vercel.app) and select **Start guided safe path** on **Overview**.
+1. Open the [live demo](https://agentgate.flint.network) and select **Start guided safe path** on **Overview**.
 2. In **Tool assessments**, keep **Safe example**, select **Assess this tool version**, then **Issue community Tool Passport**.
 3. In **Identity registry**, select **Register identity and semantic authority**, then **Claim agent and assign eligible tool**.
 4. In **Gateway policy**, select **Run allowed request**, then **View signed evidence**. Under **Evidence + help**, keep **Records** open and use **Copy credential JSON** or **Download JSON**.

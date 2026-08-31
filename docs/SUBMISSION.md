@@ -8,7 +8,7 @@ This document describes the public release candidate. The live demo and public v
 | --- | --- |
 | Project name | FLINT AgentGate |
 | Public repository | https://github.com/thefraudfather/flint-agentgate |
-| Live WebMCP URL | https://flint-agentgate.vercel.app |
+| Live WebMCP URL | https://agentgate.flint.network |
 | Public demo video | https://youtu.be/NzE9xj_ylyM |
 | Managed product destination | https://flint.network/command |
 | License | MIT for source; FLINT names and marks remain governed by `TRADEMARKS.md` |

@@ -4,7 +4,7 @@ FLINT AgentGate is an enterprise trust gateway for AI agents and MCP tools. It c
 
 This repository is an isolated hackathon prototype. It does not modify or deploy the production FLINT MVP.
 
-**Try it:** [live demo](https://agentgate.flint.network) · [public demo video](https://youtu.be/NzE9xj_ylyM)
+**Try it:** [live demo](https://agentgate.flint.network) · [public demo video](https://www.youtube.com/watch?v=KZ6s2xxE_LQ&list=LL)
 
 ## Who it is for and what it proves
 

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import test, { beforeEach } from "node:test";
 import {
   agentCapabilityClaimSchema,
   agentPassportSchema,
@@ -18,6 +18,11 @@ import { safeManifest } from "../src/scanner/fixtures";
 
 const now = "2026-08-30T12:00:00.000Z";
 const expiresAt = "2026-09-30T12:00:00.000Z";
+
+beforeEach((context) => {
+  assert("mock" in context);
+  context.mock.timers.enable({ apis: ["Date"], now: new Date(now) });
+});
 
 test("pattern intersection narrows a replacement assignment without expanding it", () => {
   assert.deepEqual(
@@ -456,7 +461,7 @@ test("observed, correlated, verified, and governed states advance distinctly", a
   assert.equal(governed.state, "governed");
 });
 
-test("freeze, revocation, and expiry fail closed during resolution", async () => {
+test("freeze, revocation, and expiry fail closed during resolution", async (context) => {
   const frozen = await setupRegistry();
   const frozenAssignment = await frozen.registry.createAssignment({
     agentPassportId: frozen.agentPassport.id,
@@ -496,5 +501,10 @@ test("freeze, revocation, and expiry fail closed during resolution", async () =>
   assert.throws(
     () => expired.registry.resolveAssignment(expiredAssignment.id, { now: "2026-10-01T00:00:00.000Z" }),
     /not active and current/,
+  );
+  context.mock.timers.setTime(Date.parse(expired.credential.passport.expiresAt));
+  assert.throws(
+    () => expired.registry.resolveAssignment(expiredAssignment.id),
+    /Tool Passport is not active and current/,
   );
 });

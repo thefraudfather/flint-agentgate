@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const contractVersion = "agentgate.v0" as const;
+export const transactionUsdSchema = z.number().finite().nonnegative();
 
 export const environmentSchema = z.enum(["demo", "test", "production"]);
 export const statusSchema = z.enum(["active", "frozen", "revoked"]);
@@ -37,7 +38,7 @@ export const semanticAuthoritySchema = z.object({
   allow: z.array(semanticRuleSchema).min(1).max(128),
   deny: z.array(semanticRuleSchema).max(128).default([]),
   permittedRoots: z.array(nonEmptySchema).max(32).default([]),
-  maxTransactionUsd: z.number().nonnegative().optional(),
+  maxTransactionUsd: transactionUsdSchema.optional(),
   expiresAt: z.string().datetime().optional(),
 });
 
@@ -131,7 +132,7 @@ export const semanticAuthorityGrantSchema = z.object({
   deny: z.array(semanticRuleSchema).max(128).default([]),
   permittedRoots: z.array(nonEmptySchema).max(64).default([]),
   permittedSideEffects: z.array(nonEmptySchema).max(32).default([]),
-  maxTransactionUsd: z.number().nonnegative().optional(),
+  maxTransactionUsd: transactionUsdSchema.optional(),
   status: statusSchema,
   issuedAt: z.string().datetime(),
   expiresAt: z.string().datetime(),

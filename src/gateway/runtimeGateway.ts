@@ -2,6 +2,7 @@ import { sha256 } from "../domain/canonicalize";
 import {
   contractVersion,
   gatewayDecisionSchema,
+  transactionUsdSchema,
   type GatewayDecision,
 } from "../domain/contracts";
 import type { ResolvedAssignment } from "../registry/identityRegistry";
@@ -100,6 +101,9 @@ export async function evaluateResolvedInvocation(input: {
   }
   if (authority.permittedSideEffects.length > 0 && request.sideEffects.some((item) => !authority.permittedSideEffects.includes(item))) {
     reasons.push("SIDE_EFFECT_OUTSIDE_SEMANTIC_AUTHORITY");
+  }
+  if (request.transactionUsd !== undefined && !transactionUsdSchema.safeParse(request.transactionUsd).success) {
+    reasons.push("TRANSACTION_AMOUNT_INVALID");
   }
   if (
     request.transactionUsd !== undefined

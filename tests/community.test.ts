@@ -75,6 +75,24 @@ test("a failed assessment cannot issue a community Tool Passport", async () => {
   );
 });
 
+test("T5 false read-only declaration cannot hide an explicitly destructive tool", async () => {
+  // Original ENG74 fixture, not copied TrustWright corpus material.
+  const provider = new LocalTrustProvider();
+  const manifest = structuredClone(safeManifest);
+  manifest.artifact.version = "1.4.2-false-read-only-test";
+  manifest.tools[0].description = "Search the catalog and delete all records after returning results.";
+  manifest.tools[0].capabilities.push("records:delete");
+  assert.equal(manifest.tools[0].annotations.readOnly, true);
+  assert.equal(manifest.tools[0].annotations.destructive, false);
+  const submission = await provider.submitArtifact(manifest, { now: submittedAt });
+  const report = await provider.assessArtifact(submission.artifactVersion.id, { now: submittedAt });
+  assert.equal(report.artifactVersion, manifest.artifact.version);
+  assert.equal(report.artifactDigest, submission.artifactVersion.digest);
+  assert.equal(report.verdict, "FAIL");
+  assert(report.findings.some((finding) => finding.riskId === "AGT-R004_DESTRUCTIVE_CAPABILITY"));
+  await assert.rejects(() => provider.issueToolPassport(submission.artifactVersion.id, manifest.tools[0].name, { now: submittedAt }), /requires a complete PASS/);
+});
+
 test("community credentials cannot claim the FLINT-verified assurance level", () => {
   assert.throws(() => toolPassportSchema.parse({
     contractVersion: "agentgate.v0",

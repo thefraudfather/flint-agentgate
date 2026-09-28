@@ -50,7 +50,7 @@ export function registerNativeWebMcpTool(definition: WebMcpToolDefinition): void
 export class ConditionalWebMcpGateway {
   readonly provider: TrustProvider;
   readonly documentLike?: DocumentWithModelContext;
-  #registered = new Map<string, { assignmentId: string; dispose?: () => void }>();
+  #registered = new Map<string, { assignmentId: string; toolPassportId: string; artifactDigest: string; dispose?: () => void }>();
 
   constructor(provider: TrustProvider, documentLike = getNativeWebMcpDocument()) {
     this.provider = provider;
@@ -77,8 +77,16 @@ export class ConditionalWebMcpGateway {
     buildRequest: (toolInput: unknown) => GatewayInvocationRequest;
     now?: string;
   }): GatewaySurfaceState {
+    const assignmentId = input.assignmentId;
+    let toolPassportId: string;
+    let artifactDigest: string;
     try {
-      this.provider.resolveAssignment(input.assignmentId, { now: input.now });
+      const resolved = this.provider.resolveAssignment(assignmentId, { now: input.now });
+      if (input.name !== resolved.credential.passport.toolName) {
+        throw new Error("WebMCP tool name does not match its Tool Passport.");
+      }
+      toolPassportId = resolved.credential.passport.id;
+      artifactDigest = resolved.credential.passport.artifactDigest;
     } catch (error) {
       this.#remove(input.name);
       return {
@@ -99,7 +107,7 @@ export class ConditionalWebMcpGateway {
     }
 
     const current = this.#registered.get(input.name);
-    if (current?.assignmentId === input.assignmentId) {
+    if (current?.assignmentId === assignmentId && current.toolPassportId === toolPassportId && current.artifactDigest === artifactDigest) {
       return { supported: true, mode: "webmcp", eligibility: "registered", detail: "Eligible tool is registered through WebMCP." };
     }
     this.#remove(input.name);
@@ -110,7 +118,15 @@ export class ConditionalWebMcpGateway {
       execute: async (toolInput) => {
         // Eligibility is deliberately resolved again at invocation time so a stale
         // browser registration cannot survive a freeze, revocation, or expiry.
-        const result = await this.provider.evaluateInvocation(input.buildRequest(toolInput), { now: input.now });
+        const request = input.buildRequest(toolInput);
+        if (request.assignmentId !== assignmentId) {
+          throw new Error("AgentGate BLOCK: REGISTRATION_ASSIGNMENT_MISMATCH");
+        }
+        const resolved = this.provider.resolveAssignment(assignmentId, { now: input.now });
+        if (resolved.credential.passport.id !== toolPassportId || resolved.credential.passport.artifactDigest !== artifactDigest) {
+          throw new Error("AgentGate BLOCK: REGISTRATION_TOOL_VERSION_MISMATCH");
+        }
+        const result = await this.provider.evaluateInvocation(request, { now: input.now });
         if (result.decision.verdict !== "ALLOW") {
           throw new Error(`AgentGate ${result.decision.verdict}: ${result.decision.reasonCodes.join(", ")}`);
         }
@@ -120,7 +136,7 @@ export class ConditionalWebMcpGateway {
     const dispose = this.documentLike === getNativeWebMcpDocument()
       ? registerNativeWebMcpTool(definition)
       : this.documentLike.modelContext.registerTool(definition);
-    this.#registered.set(input.name, { assignmentId: input.assignmentId, dispose: typeof dispose === "function" ? dispose : undefined });
+    this.#registered.set(input.name, { assignmentId, toolPassportId, artifactDigest, dispose: typeof dispose === "function" ? dispose : undefined });
     return { supported: true, mode: "webmcp", eligibility: "registered", detail: "Eligible tool is registered through WebMCP." };
   }
 

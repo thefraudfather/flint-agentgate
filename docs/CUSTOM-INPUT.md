@@ -43,6 +43,10 @@ For resources, destinations, data classes, and side effects, an empty list means
 - Observation confidence must be between 0 and 100, and evidence sources and instrumented surfaces cannot be empty.
 - Authority conditions are recorded in the Semantic Authority Grant and its policy digest, but AgentGate Community does not interpret them during invocation. They are not an enforcement substitute.
 - A transaction ceiling is checked only when a gateway request supplies `transactionUsd`. The built-in browser demo request does not supply it.
+- Supplied `transactionUsd` and configured ceilings must be finite, nonnegative USD numbers. Fractional USD values are accepted. Invalid supplied amounts produce `BLOCK` with `TRANSACTION_AMOUNT_INVALID` in both gateway evaluators.
+- Native WebMCP registration names must match the assigned Tool Passport's tool name. A registered handler is bound to its assignment ID, Tool Passport ID, and artifact digest. Replacing the tool version under the same assignment ID requires a new registration; retained old handles deny invocation.
+
+The local ENG75 escrow regression supplies only `job_id` at the tool surface. Its trusted test resolver binds the signed-in principal and agent to the assigned action, job state, provider wallet, price, and conversion rate, then supplies the derived USD amount. It rejects missing context and changes to the approved job before evaluation. This resolver exists only in tests. A production payment integration would need its own trusted resolver and monetary-input requirement; Community does not infer a payment mandate or currency conversion from a tool name or browser login.
 
 ## Troubleshooting
 

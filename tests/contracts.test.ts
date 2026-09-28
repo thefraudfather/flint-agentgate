@@ -8,6 +8,7 @@ import {
   toolSchemaSchema,
   toolAssignmentSchema,
   toolPassportSchema,
+  semanticAuthorityGrantSchema,
   type AgentIdentity,
   type ToolAssignment,
   type ToolPassport,
@@ -127,6 +128,23 @@ test("allows only when identity, passport, assignment, and request intersect", a
 
   assert.equal(gatewayDecisionSchema.parse(decision).verdict, "ALLOW");
   assert.deepEqual(decision.reasonCodes, ["POLICY_INTERSECTION_SATISFIED"]);
+});
+
+test("both authority schemas and the legacy evaluator reject invalid USD values", async () => {
+  for (const transactionUsd of [NaN, Infinity, -Infinity, -1, null, "10"]) {
+    assert.equal(agentIdentitySchema.safeParse({ ...agent, authority: { ...agent.authority, maxTransactionUsd: transactionUsd } }).success, false);
+    assert.equal(semanticAuthorityGrantSchema.safeParse({
+      contractVersion, id: "authority:invalid", agentPassportId: agent.id, issuerPrincipalId: agent.principalId,
+      version: 1, ...agent.authority, maxTransactionUsd: transactionUsd, status: "active", issuedAt: agent.issuedAt, expiresAt: agent.expiresAt,
+    }).success, false);
+    const decision = await evaluateRequest({ now, agent, passport, assignment, request: {
+      id: "request:invalid-amount", agentId: agent.id, toolPassportId: passport.id, action: "catalog.lookup",
+      resource: "catalog://approved/item", destination: "catalog.northstar.example", dataClasses: ["public"],
+      transactionUsd: transactionUsd as number,
+    } });
+    assert.equal(decision.verdict, "BLOCK", String(transactionUsd));
+    assert(decision.reasonCodes.includes("TRANSACTION_AMOUNT_INVALID"));
+  }
 });
 
 test("treats empty legacy assignment constraints as unconstrained", async () => {

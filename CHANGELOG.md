@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Bound native WebMCP registration to the assigned Tool Passport name, ID, artifact digest, and invocation assignment, with original tool-swap and name-spoof regressions including replacement under the same assignment ID.
+- Reject invalid supplied USD amounts and non-finite authority ceilings through shared validation; retain optional amounts for existing nonpayment requests.
+- Added a false-read-only assessment regression and isolated `job_id` escrow authority fixtures covering trusted payment context, changed mandates, logout, freeze, revocation, and expiry. No payment adapter or hosted integration was added.
+
 ## 0.1.0 — 2026-08-30
 
 - Added a versioned agent identity and semantic authority registry.

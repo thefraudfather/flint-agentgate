@@ -2,6 +2,7 @@ import { sha256 } from "../domain/canonicalize";
 import {
   contractVersion,
   gatewayDecisionSchema,
+  transactionUsdSchema,
   type AgentIdentity,
   type GatewayDecision,
   type ToolAssignment,
@@ -79,6 +80,9 @@ export async function evaluateRequest(input: EvaluationInput): Promise<GatewayDe
     reasons.push("OUTSIDE_PERMITTED_ROOT");
   }
 
+  if (request.transactionUsd !== undefined && !transactionUsdSchema.safeParse(request.transactionUsd).success) {
+    reasons.push("TRANSACTION_AMOUNT_INVALID");
+  }
   if (
     request.transactionUsd !== undefined
     && agent.authority.maxTransactionUsd !== undefined

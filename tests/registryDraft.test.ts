@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import test, { beforeEach } from "node:test";
 import { LocalTrustProvider } from "../src/providers/localTrustProvider";
 import { AssignmentRejectedError } from "../src/registry/assignmentPolicy";
 import {
@@ -9,6 +9,11 @@ import {
 import { safeManifest } from "../src/scanner/fixtures";
 
 const now = "2026-08-30T12:00:00.000Z";
+
+beforeEach((context) => {
+  assert("mock" in context);
+  context.mock.timers.enable({ apis: ["Date"], now: new Date(now) });
+});
 
 async function issueCredential() {
   const provider = new LocalTrustProvider();
